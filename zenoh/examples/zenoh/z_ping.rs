@@ -11,13 +11,17 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use async_std::stream::StreamExt;
-use async_std::sync::{Arc, Barrier, Mutex};
-use async_std::task;
+use async_std::{
+    stream::StreamExt,
+    sync::{Arc, Barrier, Mutex},
+    task,
+};
 use clap::{App, Arg};
-use std::collections::HashMap;
-use std::convert::{TryFrom, TryInto};
-use std::time::{Duration, Instant};
+use std::{
+    collections::HashMap,
+    convert::{TryFrom, TryInto},
+    time::{Duration, Instant},
+};
 use zenoh::*;
 
 #[async_std::main]

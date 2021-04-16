@@ -14,10 +14,10 @@
 #[cfg(feature = "zero-copy")]
 use super::SharedMemoryBuf;
 use async_std::sync::Arc;
-use std::fmt;
-use std::io::IoSlice;
-use std::ops::{
-    Deref, Index, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive,
+use std::{
+    fmt,
+    io::IoSlice,
+    ops::{Deref, Index, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive},
 };
 use zenoh_util::collections::RecyclingObject;
 

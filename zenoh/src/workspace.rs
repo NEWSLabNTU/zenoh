@@ -11,22 +11,24 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use crate::net::queryable::EVAL;
-use crate::net::{
-    data_kind, encoding, CallbackSubscriber, CongestionControl, DataInfo, Query,
-    QueryConsolidation, QueryTarget, Queryable, RBuf, Reliability, RepliesSender, Reply, ResKey,
-    Sample, Session, SubInfo, SubMode, Subscriber, ZInt,
+use crate::{
+    net::{
+        data_kind, encoding, queryable::EVAL, CallbackSubscriber, CongestionControl, DataInfo,
+        Query, QueryConsolidation, QueryTarget, Queryable, RBuf, Reliability, RepliesSender, Reply,
+        ResKey, Sample, Session, SubInfo, SubMode, Subscriber, ZInt,
+    },
+    utils::new_reception_timestamp,
+    Path, PathExpr, Selector, Timestamp, Value, ZError, ZErrorKind, ZResult, Zenoh,
 };
-use crate::utils::new_reception_timestamp;
-use crate::{Path, PathExpr, Selector, Timestamp, Value, ZError, ZErrorKind, ZResult, Zenoh};
-use async_std::channel::Receiver;
-use async_std::pin::Pin;
-use async_std::stream::Stream;
-use async_std::task::{Context, Poll};
+use async_std::{
+    channel::Receiver,
+    pin::Pin,
+    stream::Stream,
+    task::{Context, Poll},
+};
 use log::{debug, warn};
 use pin_project_lite::pin_project;
-use std::convert::TryInto;
-use std::fmt;
+use std::{convert::TryInto, fmt};
 use zenoh_util::zerror;
 
 /// A Workspace to operate on zenoh.

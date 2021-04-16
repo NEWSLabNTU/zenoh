@@ -11,24 +11,34 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use super::protocol::core::{whatami, PeerId, WhatAmI};
-use super::protocol::io::{RBuf, WBuf};
-use super::protocol::link::{Link, Locator};
-use super::protocol::proto::{
-    Data, Hello, Scout, SessionBody, SessionMessage, ZenohBody, ZenohMessage,
+use super::{
+    protocol::{
+        core::{whatami, PeerId, WhatAmI},
+        io::{RBuf, WBuf},
+        link::{Link, Locator},
+        proto::{Data, Hello, Scout, SessionBody, SessionMessage, ZenohBody, ZenohMessage},
+        session::{Session, SessionEventDispatcher, SessionManager},
+    },
+    routing::{
+        pubsub::full_reentrant_route_data,
+        router::{LinkStateInterceptor, Router},
+    },
 };
-use super::protocol::session::{Session, SessionEventDispatcher, SessionManager};
-use super::routing::pubsub::full_reentrant_route_data;
-use super::routing::router::{LinkStateInterceptor, Router};
-use async_std::net::UdpSocket;
-use async_std::sync::{Arc, RwLock};
+use async_std::{
+    net::UdpSocket,
+    sync::{Arc, RwLock},
+};
 use futures::prelude::*;
 use socket2::{Domain, Socket, Type};
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::time::Duration;
-use zenoh_util::core::{ZError, ZErrorKind, ZResult};
-use zenoh_util::properties::config::*;
-use zenoh_util::zerror;
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    time::Duration,
+};
+use zenoh_util::{
+    core::{ZError, ZErrorKind, ZResult},
+    properties::config::*,
+    zerror,
+};
 
 const RCV_BUF_SIZE: usize = 65536;
 const SEND_BUF_INITIAL_SIZE: usize = 8;

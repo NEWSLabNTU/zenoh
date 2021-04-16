@@ -13,8 +13,7 @@
 //
 use clap::{App, Arg};
 use std::convert::TryFrom;
-use zenoh::net::RBuf;
-use zenoh::*;
+use zenoh::{net::RBuf, *};
 
 #[async_std::main]
 async fn main() {

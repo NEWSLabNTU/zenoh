@@ -13,9 +13,11 @@
 //
 use rand::*;
 use uhlc::Timestamp;
-use zenoh::net::protocol::core::*;
-use zenoh::net::protocol::io::{RBuf, WBuf};
-use zenoh::net::protocol::proto::*;
+use zenoh::net::protocol::{
+    core::*,
+    io::{RBuf, WBuf},
+    proto::*,
+};
 
 const NUM_ITER: usize = 100;
 const PROPS_LENGTH: usize = 3;

@@ -16,8 +16,10 @@ use clap::{Arg, ArgMatches};
 use libloading::{Library, Symbol};
 use log::{debug, trace, warn};
 use std::path::PathBuf;
-use zenoh_util::core::{ZError, ZErrorKind, ZResult};
-use zenoh_util::{zconfigurable, zerror, LibLoader};
+use zenoh_util::{
+    core::{ZError, ZErrorKind, ZResult},
+    zconfigurable, zerror, LibLoader,
+};
 
 zconfigurable! {
     static ref PLUGIN_PREFIX: String = "zplugin_".to_string();

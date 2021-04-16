@@ -11,9 +11,7 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use super::proto::ZenohMessage;
-use super::session::defaults::QUEUE_PRIO_DATA;
-use super::SessionTransport;
+use super::{proto::ZenohMessage, session::defaults::QUEUE_PRIO_DATA, SessionTransport};
 use zenoh_util::zasyncread;
 
 impl SessionTransport {

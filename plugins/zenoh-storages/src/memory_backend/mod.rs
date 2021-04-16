@@ -14,12 +14,14 @@
 use async_std::sync::{Arc, RwLock};
 use async_trait::async_trait;
 use log::{debug, trace, warn};
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
-use std::time::{Duration, Instant};
-use zenoh::net::utils::resource_name;
-use zenoh::net::Sample;
-use zenoh::{utils, ChangeKind, Properties, Timestamp, Value, ZResult};
+use std::{
+    collections::{hash_map::Entry, HashMap},
+    time::{Duration, Instant},
+};
+use zenoh::{
+    net::{utils::resource_name, Sample},
+    utils, ChangeKind, Properties, Timestamp, Value, ZResult,
+};
 use zenoh_backend_traits::*;
 use zenoh_util::collections::{Timed, TimedEvent, TimedHandle, Timer};
 

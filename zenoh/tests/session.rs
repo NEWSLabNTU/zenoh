@@ -11,20 +11,19 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use async_std::prelude::*;
-use async_std::sync::Arc;
-use async_std::task;
+use async_std::{prelude::*, sync::Arc, task};
 use async_trait::async_trait;
-use std::io::Cursor;
-use std::time::Duration;
-use zenoh::net::protocol::core::{whatami, PeerId};
-use zenoh::net::protocol::link::tls::{
-    internal::pemfile, ClientConfig, NoClientAuth, ServerConfig,
-};
-use zenoh::net::protocol::link::{Locator, LocatorProperty};
-use zenoh::net::protocol::session::{
-    DummySessionEventHandler, Session, SessionDispatcher, SessionEventHandler, SessionHandler,
-    SessionManager, SessionManagerConfig, SessionManagerOptionalConfig,
+use std::{io::Cursor, time::Duration};
+use zenoh::net::protocol::{
+    core::{whatami, PeerId},
+    link::{
+        tls::{internal::pemfile, ClientConfig, NoClientAuth, ServerConfig},
+        Locator, LocatorProperty,
+    },
+    session::{
+        DummySessionEventHandler, Session, SessionDispatcher, SessionEventHandler, SessionHandler,
+        SessionManager, SessionManagerConfig, SessionManagerOptionalConfig,
+    },
 };
 use zenoh_util::core::ZResult;
 

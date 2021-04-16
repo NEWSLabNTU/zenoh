@@ -13,10 +13,11 @@
 //
 use crate::net::ResKey;
 use regex::Regex;
-use std::convert::TryFrom;
-use std::fmt;
-use zenoh_util::core::{ZError, ZErrorKind, ZResult};
-use zenoh_util::zerror;
+use std::{convert::TryFrom, fmt};
+use zenoh_util::{
+    core::{ZError, ZErrorKind, ZResult},
+    zerror,
+};
 
 /// A zenoh Path is a set of strings separated by `'/'` , as in a filesystem path.
 ///

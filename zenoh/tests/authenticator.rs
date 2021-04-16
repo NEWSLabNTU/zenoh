@@ -11,20 +11,20 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use async_std::sync::Arc;
-use async_std::task;
+use async_std::{sync::Arc, task};
 use async_trait::async_trait;
-use std::collections::HashMap;
-use std::time::Duration;
-use zenoh::net::protocol::core::{whatami, PeerId};
-use zenoh::net::protocol::link::{Link, Locator};
-use zenoh::net::protocol::proto::ZenohMessage;
+use std::{collections::HashMap, time::Duration};
 #[cfg(feature = "zero-copy")]
 use zenoh::net::protocol::session::authenticator::SharedMemoryAuthenticator;
-use zenoh::net::protocol::session::authenticator::UserPasswordAuthenticator;
-use zenoh::net::protocol::session::{
-    DummySessionEventHandler, Session, SessionDispatcher, SessionEventHandler, SessionHandler,
-    SessionManager, SessionManagerConfig, SessionManagerOptionalConfig,
+use zenoh::net::protocol::{
+    core::{whatami, PeerId},
+    link::{Link, Locator},
+    proto::ZenohMessage,
+    session::{
+        authenticator::UserPasswordAuthenticator, DummySessionEventHandler, Session,
+        SessionDispatcher, SessionEventHandler, SessionHandler, SessionManager,
+        SessionManagerConfig, SessionManagerOptionalConfig,
+    },
 };
 use zenoh_util::core::ZResult;
 

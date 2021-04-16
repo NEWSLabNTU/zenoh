@@ -11,11 +11,15 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use super::core::{CongestionControl, PeerId, Reliability, ResKey, ZInt};
-use super::core::{QueryConsolidation, QueryTarget, SubInfo};
-use super::io::RBuf;
-use super::proto::{zmsg, DataInfo, Declaration, ReplyContext, RoutingContext, ZenohMessage};
-use super::session::Session;
+use super::{
+    core::{
+        CongestionControl, PeerId, QueryConsolidation, QueryTarget, Reliability, ResKey, SubInfo,
+        ZInt,
+    },
+    io::RBuf,
+    proto::{zmsg, DataInfo, Declaration, ReplyContext, RoutingContext, ZenohMessage},
+    session::Session,
+};
 
 pub struct Mux {
     handler: Session,

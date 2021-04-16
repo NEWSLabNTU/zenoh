@@ -11,9 +11,11 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use super::core::{Channel, ZInt};
-use super::proto::{Frame, FramePayload, SessionBody, SessionMessage};
-use super::SessionTransport;
+use super::{
+    core::{Channel, ZInt},
+    proto::{Frame, FramePayload, SessionBody, SessionMessage},
+    SessionTransport,
+};
 use zenoh_util::{zasynclock, zasyncread};
 
 /*************************************/

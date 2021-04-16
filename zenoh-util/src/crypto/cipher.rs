@@ -12,11 +12,14 @@
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
 use super::PseudoRng;
-use crate::core::{ZError, ZErrorKind, ZResult};
-use crate::zerror;
-use aes_soft::cipher::generic_array::GenericArray;
-use aes_soft::cipher::{BlockCipher as AesBlockCipher, NewBlockCipher};
-use aes_soft::Aes128;
+use crate::{
+    core::{ZError, ZErrorKind, ZResult},
+    zerror,
+};
+use aes_soft::{
+    cipher::{generic_array::GenericArray, BlockCipher as AesBlockCipher, NewBlockCipher},
+    Aes128,
+};
 use rand::Rng;
 
 pub struct BlockCipher {

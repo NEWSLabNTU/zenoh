@@ -17,9 +17,11 @@ extern crate rand;
 
 use criterion::{black_box, Criterion};
 
-use zenoh::net::protocol::core::{Channel, CongestionControl, Reliability, ResKey, ZInt};
-use zenoh::net::protocol::io::{RBuf, WBuf};
-use zenoh::net::protocol::proto::{Attachment, FramePayload, SessionMessage, ZenohMessage};
+use zenoh::net::protocol::{
+    core::{Channel, CongestionControl, Reliability, ResKey, ZInt},
+    io::{RBuf, WBuf},
+    proto::{Attachment, FramePayload, SessionMessage, ZenohMessage},
+};
 
 fn _bench_zint_write((v, buf): (ZInt, &mut WBuf)) {
     buf.write_zint(v);

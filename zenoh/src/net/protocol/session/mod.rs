@@ -18,15 +18,15 @@ mod manager;
 mod primitives;
 mod transport;
 
-use super::core;
-use super::core::{PeerId, WhatAmI, ZInt};
-use super::io;
-use super::link;
-use super::link::Link;
-use super::orchestrator;
-use super::proto;
-use super::proto::{smsg, ZenohMessage};
-use super::session;
+use super::{
+    core,
+    core::{PeerId, WhatAmI, ZInt},
+    io, link,
+    link::Link,
+    orchestrator, proto,
+    proto::{smsg, ZenohMessage},
+    session,
+};
 use async_std::sync::{Arc, Weak};
 use async_trait::async_trait;
 pub use manager::*;

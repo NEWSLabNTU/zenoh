@@ -13,21 +13,24 @@
 //
 use async_std::sync::{Arc, RwLock};
 use petgraph::graph::NodeIndex;
-use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
-use zenoh_util::sync::get_mut_unchecked;
-use zenoh_util::zasyncread;
-
-use super::protocol::core::{
-    whatami, CongestionControl, PeerId, Reliability, SubInfo, SubMode, ZInt,
+use std::{
+    borrow::Cow,
+    collections::{HashMap, HashSet},
 };
-use super::protocol::io::RBuf;
-use super::protocol::proto::{DataInfo, RoutingContext};
+use zenoh_util::{sync::get_mut_unchecked, zasyncread};
 
-use super::face::FaceState;
-use super::network::Network;
-use super::resource::{elect_router, PullCaches, Resource, Route, SessionContext};
-use super::router::Tables;
+use super::protocol::{
+    core::{whatami, CongestionControl, PeerId, Reliability, SubInfo, SubMode, ZInt},
+    io::RBuf,
+    proto::{DataInfo, RoutingContext},
+};
+
+use super::{
+    face::FaceState,
+    network::Network,
+    resource::{elect_router, PullCaches, Resource, Route, SessionContext},
+    router::Tables,
+};
 
 #[inline]
 async fn send_sourced_subscription_to_net_childs(

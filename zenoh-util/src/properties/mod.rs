@@ -14,11 +14,13 @@
 pub mod config;
 
 use crate::core::*;
-use std::collections::HashMap;
-use std::convert::{From, TryFrom};
-use std::fmt;
-use std::marker::PhantomData;
-use std::ops::{Deref, DerefMut};
+use std::{
+    collections::HashMap,
+    convert::{From, TryFrom},
+    fmt,
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+};
 
 pub trait KeyTranscoder {
     fn encode(key: &str) -> Option<u64>;

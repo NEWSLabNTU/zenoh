@@ -14,14 +14,11 @@
 #![recursion_limit = "256"]
 
 use clap::{Arg, ArgMatches};
-use futures::prelude::*;
-use futures::select;
+use futures::{prelude::*, select};
 use log::{debug, info};
 use runtime::Runtime;
 use std::collections::HashMap;
-use zenoh::net::queryable::STORAGE;
-use zenoh::net::utils::resource_name;
-use zenoh::net::*;
+use zenoh::net::{queryable::STORAGE, utils::resource_name, *};
 
 #[no_mangle]
 pub fn get_expected_args<'a, 'b>() -> Vec<Arg<'a, 'b>> {

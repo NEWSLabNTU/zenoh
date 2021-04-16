@@ -99,9 +99,7 @@ use log::debug;
 
 pub mod net;
 
-use net::info::ZN_INFO_ROUTER_PID_KEY;
-use net::runtime::Runtime;
-use net::Session;
+use net::{info::ZN_INFO_ROUTER_PID_KEY, runtime::Runtime, Session};
 pub use net::{ZError, ZErrorKind, ZResult};
 
 mod workspace;
@@ -120,8 +118,7 @@ pub use values::*;
 pub mod utils;
 
 pub use net::protocol::core::{Timestamp, TimestampId};
-pub use zenoh_util::properties::config::ConfigProperties;
-pub use zenoh_util::properties::Properties;
+pub use zenoh_util::properties::{config::ConfigProperties, Properties};
 
 /// The zenoh client API.
 pub struct Zenoh {

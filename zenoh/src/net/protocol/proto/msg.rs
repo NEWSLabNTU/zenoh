@@ -11,9 +11,7 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use super::core::*;
-use super::io::RBuf;
-use super::link::Locator;
+use super::{core::*, io::RBuf, link::Locator};
 use std::fmt;
 
 /// # Attachment decorator
@@ -146,8 +144,7 @@ mod imsg {
 /*         ZENOH MESSAGES            */
 /*************************************/
 pub mod zmsg {
-    use super::imsg;
-    use super::{CongestionControl, Reliability, ZInt};
+    use super::{imsg, CongestionControl, Reliability, ZInt};
 
     // Zenoh message IDs -- Re-export of some of the Inner Message IDs
     pub mod id {

@@ -13,14 +13,18 @@
 //
 pub mod rname;
 
-use std::convert::From;
-use std::fmt;
-use std::hash::{Hash, Hasher};
-use std::str::FromStr;
-use std::sync::atomic::AtomicU64;
+use std::{
+    convert::From,
+    fmt,
+    hash::{Hash, Hasher},
+    str::FromStr,
+    sync::atomic::AtomicU64,
+};
 pub use uhlc::Timestamp;
-use zenoh_util::core::{ZError, ZErrorKind};
-use zenoh_util::zerror;
+use zenoh_util::{
+    core::{ZError, ZErrorKind},
+    zerror,
+};
 
 pub type TimestampId = uhlc::ID;
 

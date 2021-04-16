@@ -11,16 +11,20 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use super::face::FaceState;
-use super::protocol::core::rname;
-use super::protocol::core::{PeerId, ResKey, SubInfo, ZInt};
-use super::protocol::io::RBuf;
-use super::protocol::proto::{DataInfo, RoutingContext};
-use super::router::Tables;
+use super::{
+    face::FaceState,
+    protocol::{
+        core::{rname, PeerId, ResKey, SubInfo, ZInt},
+        io::RBuf,
+        proto::{DataInfo, RoutingContext},
+    },
+    router::Tables,
+};
 use async_std::sync::{Arc, Weak};
-use std::collections::hash_map::DefaultHasher;
-use std::collections::{HashMap, HashSet};
-use std::hash::{Hash, Hasher};
+use std::{
+    collections::{hash_map::DefaultHasher, HashMap, HashSet},
+    hash::{Hash, Hasher},
+};
 use zenoh_util::sync::get_mut_unchecked;
 
 pub(super) type Route = HashMap<usize, (Arc<FaceState>, ResKey, Option<RoutingContext>)>;

@@ -11,8 +11,10 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use zenoh::net::protocol::core::{ZInt, ZINT_MAX_BYTES};
-use zenoh::net::protocol::io::{RBuf, WBuf};
+use zenoh::net::protocol::{
+    core::{ZInt, ZINT_MAX_BYTES},
+    io::{RBuf, WBuf},
+};
 
 fn test_zint(v: ZInt) {
     let mut buf = WBuf::new(32, true);

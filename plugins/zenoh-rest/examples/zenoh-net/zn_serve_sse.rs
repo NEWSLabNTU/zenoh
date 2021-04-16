@@ -15,9 +15,10 @@
 
 use clap::{App, Arg};
 use futures::prelude::*;
-use zenoh::net::queryable::EVAL;
-use zenoh::net::*;
-use zenoh::Properties;
+use zenoh::{
+    net::{queryable::EVAL, *},
+    Properties,
+};
 
 const HTML: &str = r#"
 <div id="result"></div>

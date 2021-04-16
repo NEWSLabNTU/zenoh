@@ -14,17 +14,16 @@
 mod demux;
 mod mux;
 
-use super::core;
-use super::io;
-use super::link;
-use super::proto;
-use super::session;
+use super::{core, io, link, proto, session};
 
-use super::core::{
-    CongestionControl, PeerId, QueryConsolidation, QueryTarget, Reliability, ResKey, SubInfo, ZInt,
+use super::{
+    core::{
+        CongestionControl, PeerId, QueryConsolidation, QueryTarget, Reliability, ResKey, SubInfo,
+        ZInt,
+    },
+    io::RBuf,
+    proto::{DataInfo, RoutingContext},
 };
-use super::io::RBuf;
-use super::proto::{DataInfo, RoutingContext};
 use async_trait::async_trait;
 pub use demux::*;
 pub use mux::*;

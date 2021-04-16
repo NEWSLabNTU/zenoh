@@ -22,8 +22,7 @@ mod lib_loader;
 pub mod net;
 pub mod properties;
 pub mod sync;
-pub use crate::core::dispatcher::*;
-pub use crate::core::macros::*;
+pub use crate::core::{dispatcher::*, macros::*};
 pub use lib_loader::*;
 
 /// the "ZENOH_HOME" environement variable name

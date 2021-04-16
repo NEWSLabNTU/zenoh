@@ -13,18 +13,16 @@
 //
 #[macro_use]
 extern crate criterion;
-use async_std::sync::Arc;
-use async_std::task;
+use async_std::{sync::Arc, task};
 use criterion::{BenchmarkId, Criterion};
-use zenoh::net::protocol::core::{
-    whatami, CongestionControl, PeerId, Reliability, SubInfo, SubMode,
+use zenoh::net::{
+    protocol::{
+        core::{whatami, CongestionControl, PeerId, Reliability, SubInfo, SubMode},
+        io::RBuf,
+        session::DummyPrimitives,
+    },
+    routing::{pubsub::*, resource::*, router::Tables, OutSession},
 };
-use zenoh::net::protocol::io::RBuf;
-use zenoh::net::protocol::session::DummyPrimitives;
-use zenoh::net::routing::pubsub::*;
-use zenoh::net::routing::resource::*;
-use zenoh::net::routing::router::Tables;
-use zenoh::net::routing::OutSession;
 
 fn tables_bench(c: &mut Criterion) {
     task::block_on(async {

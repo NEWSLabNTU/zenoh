@@ -11,8 +11,7 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use async_std::prelude::*;
-use async_std::stream::StreamExt;
+use async_std::{prelude::*, stream::StreamExt};
 use zenoh::net::*;
 
 #[async_std::main]

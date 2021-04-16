@@ -12,9 +12,10 @@
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
 use clap::{App, Arg};
-use zenoh::net::ResKey::*;
-use zenoh::net::*;
-use zenoh::Properties;
+use zenoh::{
+    net::{ResKey::*, *},
+    Properties,
+};
 
 #[async_std::main]
 async fn main() {

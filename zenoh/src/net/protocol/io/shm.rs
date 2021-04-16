@@ -13,8 +13,10 @@
 //
 use serde::{Deserialize, Serialize};
 use shared_memory::{Shmem, ShmemConf, ShmemError};
-use std::collections::HashMap;
-use std::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
+use std::{
+    collections::HashMap,
+    sync::atomic::{AtomicPtr, AtomicUsize, Ordering},
+};
 
 const MIN_CHUNK_SIZE: usize = 1024;
 const ZENOH_SHM_PREFIX: &str = "zenoh_shm_pid";

@@ -11,22 +11,22 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use super::session::SessionManager;
-use super::{Link, LinkManagerTrait, Locator, LocatorProperty};
-use async_std::channel::{bounded, Receiver, Sender};
-use async_std::net::{SocketAddr, TcpListener, TcpStream, ToSocketAddrs};
-use async_std::prelude::*;
-use async_std::sync::{Arc, Barrier, RwLock};
-use async_std::task;
+use super::{session::SessionManager, Link, LinkManagerTrait, Locator, LocatorProperty};
+use async_std::{
+    channel::{bounded, Receiver, Sender},
+    net::{SocketAddr, TcpListener, TcpStream, ToSocketAddrs},
+    prelude::*,
+    sync::{Arc, Barrier, RwLock},
+    task,
+};
 use async_trait::async_trait;
-use std::collections::HashMap;
-use std::convert::TryInto;
-use std::fmt;
-use std::net::Shutdown;
-use std::str::FromStr;
-use std::time::Duration;
-use zenoh_util::core::{ZError, ZErrorKind, ZResult};
-use zenoh_util::{zasyncread, zasyncwrite, zerror, zerror2};
+use std::{
+    collections::HashMap, convert::TryInto, fmt, net::Shutdown, str::FromStr, time::Duration,
+};
+use zenoh_util::{
+    core::{ZError, ZErrorKind, ZResult},
+    zasyncread, zasyncwrite, zerror, zerror2,
+};
 
 // Default MTU (TCP PDU) in bytes.
 // NOTE: Since TCP is a byte-stream oriented transport, theoretically it has

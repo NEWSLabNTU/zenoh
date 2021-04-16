@@ -13,8 +13,7 @@
 //
 use clap::{App, Arg};
 use futures::prelude::*;
-use std::convert::TryFrom;
-use std::time::Instant;
+use std::{convert::TryFrom, time::Instant};
 use zenoh::*;
 
 const N: u64 = 100000;

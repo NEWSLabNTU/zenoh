@@ -11,30 +11,36 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use super::authenticator::{
-    AuthenticatedPeerLink, DummyLinkAuthenticator, DummyPeerAuthenticator, LinkAuthenticator,
-    PeerAuthenticator,
+use super::{
+    authenticator::{
+        AuthenticatedPeerLink, DummyLinkAuthenticator, DummyPeerAuthenticator, LinkAuthenticator,
+        PeerAuthenticator,
+    },
+    core::{PeerId, WhatAmI, ZInt},
+    defaults::{
+        SESSION_BATCH_SIZE, SESSION_KEEP_ALIVE, SESSION_LEASE, SESSION_OPEN_MAX_CONCURRENT,
+        SESSION_OPEN_RETRIES, SESSION_OPEN_TIMEOUT, SESSION_SEQ_NUM_RESOLUTION,
+    },
+    link::{Link, LinkManager, LinkManagerBuilder, Locator, LocatorProperty, LocatorProtocol},
+    transport::SessionTransport,
+    Session, SessionDispatcher,
 };
-use super::core::{PeerId, WhatAmI, ZInt};
-use super::defaults::{
-    SESSION_BATCH_SIZE, SESSION_KEEP_ALIVE, SESSION_LEASE, SESSION_OPEN_MAX_CONCURRENT,
-    SESSION_OPEN_RETRIES, SESSION_OPEN_TIMEOUT, SESSION_SEQ_NUM_RESOLUTION,
+use async_std::{
+    prelude::*,
+    sync::{Arc, Mutex},
+    task,
 };
-use super::link::{
-    Link, LinkManager, LinkManagerBuilder, Locator, LocatorProperty, LocatorProtocol,
-};
-use super::transport::SessionTransport;
-use super::{Session, SessionDispatcher};
-use async_std::prelude::*;
-use async_std::sync::{Arc, Mutex};
-use async_std::task;
 use rand::{RngCore, SeedableRng};
-use std::collections::{HashMap, HashSet};
-use std::time::Duration;
-use zenoh_util::core::{ZError, ZErrorKind, ZResult};
-use zenoh_util::crypto::{BlockCipher, PseudoRng};
-use zenoh_util::properties::config::ConfigProperties;
-use zenoh_util::{zasynclock, zerror};
+use std::{
+    collections::{HashMap, HashSet},
+    time::Duration,
+};
+use zenoh_util::{
+    core::{ZError, ZErrorKind, ZResult},
+    crypto::{BlockCipher, PseudoRng},
+    properties::config::ConfigProperties,
+    zasynclock, zerror,
+};
 
 /// # Examples
 /// ```

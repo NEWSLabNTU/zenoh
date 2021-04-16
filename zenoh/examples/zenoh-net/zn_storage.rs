@@ -14,13 +14,12 @@
 #![recursion_limit = "256"]
 
 use clap::{App, Arg};
-use futures::prelude::*;
-use futures::select;
+use futures::{prelude::*, select};
 use std::collections::HashMap;
-use zenoh::net::queryable::STORAGE;
-use zenoh::net::utils::resource_name;
-use zenoh::net::*;
-use zenoh::Properties;
+use zenoh::{
+    net::{queryable::STORAGE, utils::resource_name, *},
+    Properties,
+};
 
 #[async_std::main]
 async fn main() {

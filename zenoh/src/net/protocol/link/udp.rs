@@ -11,23 +11,28 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use super::session::SessionManager;
-use super::{Link, LinkManagerTrait, Locator, LocatorProperty};
-use async_std::channel::{bounded, Receiver, Sender};
-use async_std::net::{SocketAddr, ToSocketAddrs, UdpSocket};
-use async_std::prelude::*;
-use async_std::sync::{Arc, Barrier, Mutex, Weak};
-use async_std::task;
+use super::{session::SessionManager, Link, LinkManagerTrait, Locator, LocatorProperty};
+use async_std::{
+    channel::{bounded, Receiver, Sender},
+    net::{SocketAddr, ToSocketAddrs, UdpSocket},
+    prelude::*,
+    sync::{Arc, Barrier, Mutex, Weak},
+    task,
+};
 use async_trait::async_trait;
-use std::collections::HashMap;
-use std::fmt;
-use std::str::FromStr;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
-use zenoh_util::collections::{RecyclingObject, RecyclingObjectPool};
-use zenoh_util::core::{ZError, ZErrorKind, ZResult};
-use zenoh_util::sync::Mvar;
-use zenoh_util::{zasynclock, zerror};
+use std::{
+    collections::HashMap,
+    fmt,
+    str::FromStr,
+    sync::atomic::{AtomicBool, Ordering},
+    time::Duration,
+};
+use zenoh_util::{
+    collections::{RecyclingObject, RecyclingObjectPool},
+    core::{ZError, ZErrorKind, ZResult},
+    sync::Mvar,
+    zasynclock, zerror,
+};
 
 // NOTE: In case of using UDP in high-throughput scenarios, it is recommended to set the
 //       UDP buffer size on the host to a reasonable size. Usually, default values for UDP buffers

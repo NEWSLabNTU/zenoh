@@ -11,28 +11,35 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use async_std::sync::{Arc, Mutex, RwLock, Weak};
-use async_std::task::{sleep, JoinHandle};
-use std::collections::{HashMap, HashSet};
-use std::time::Duration;
+use async_std::{
+    sync::{Arc, Mutex, RwLock, Weak},
+    task::{sleep, JoinHandle},
+};
+use std::{
+    collections::{HashMap, HashSet},
+    time::Duration,
+};
 use uhlc::HLC;
 use zenoh_util::sync::get_mut_unchecked;
 
-use super::protocol::core::{whatami, PeerId, WhatAmI, ZInt};
-use super::protocol::link::Link;
-use super::protocol::proto::{ZenohBody, ZenohMessage};
-use super::protocol::session::{DeMux, Mux, Session};
-use super::OutSession;
+use super::{
+    protocol::{
+        core::{whatami, PeerId, WhatAmI, ZInt},
+        link::Link,
+        proto::{ZenohBody, ZenohMessage},
+        session::{DeMux, Mux, Session},
+    },
+    OutSession,
+};
 
-use zenoh_util::core::ZResult;
-use zenoh_util::zconfigurable;
+use zenoh_util::{core::ZResult, zconfigurable};
 
-use super::face::{Face, FaceState};
-use super::network::{shared_nodes, Network};
-pub use super::pubsub::*;
-pub use super::queries::*;
-pub use super::resource::*;
-use super::runtime::orchestrator::SessionOrchestrator;
+use super::{
+    face::{Face, FaceState},
+    network::{shared_nodes, Network},
+    runtime::orchestrator::SessionOrchestrator,
+};
+pub use super::{pubsub::*, queries::*, resource::*};
 
 zconfigurable! {
     static ref LINK_CLOSURE_DELAY: u64 = 200;

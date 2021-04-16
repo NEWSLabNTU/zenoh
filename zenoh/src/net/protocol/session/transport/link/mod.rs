@@ -15,26 +15,32 @@ mod batch;
 mod rx;
 mod tx;
 
-use super::super::super::link::Link;
-use super::core;
-use super::core::ZInt;
-use super::io;
-use super::io::{ArcSlice, RBuf};
-use super::proto;
-use super::proto::{SessionMessage, ZenohMessage};
-use super::session;
-use super::session::defaults::{QUEUE_PRIO_CTRL, RX_BUFF_SIZE};
-use super::{SeqNumGenerator, SessionTransport};
-use async_std::channel::{bounded, Receiver, Sender};
-use async_std::prelude::*;
-use async_std::sync::{Arc, Mutex};
-use async_std::task;
+use super::{
+    super::super::link::Link,
+    core,
+    core::ZInt,
+    io,
+    io::{ArcSlice, RBuf},
+    proto,
+    proto::{SessionMessage, ZenohMessage},
+    session,
+    session::defaults::{QUEUE_PRIO_CTRL, RX_BUFF_SIZE},
+    SeqNumGenerator, SessionTransport,
+};
+use async_std::{
+    channel::{bounded, Receiver, Sender},
+    prelude::*,
+    sync::{Arc, Mutex},
+    task,
+};
 use batch::*;
 use std::time::Duration;
 use tx::*;
-use zenoh_util::collections::RecyclingObjectPool;
-use zenoh_util::core::{ZError, ZErrorKind, ZResult};
-use zenoh_util::{zasynclock, zerror};
+use zenoh_util::{
+    collections::RecyclingObjectPool,
+    core::{ZError, ZErrorKind, ZResult},
+    zasynclock, zerror,
+};
 
 #[derive(Clone)]
 pub(crate) struct SessionTransportLink {

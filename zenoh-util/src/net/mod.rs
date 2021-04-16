@@ -11,11 +11,12 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use crate::core::{ZError, ZErrorKind, ZResult};
-use crate::{zconfigurable, zerror};
+use crate::{
+    core::{ZError, ZErrorKind, ZResult},
+    zconfigurable, zerror,
+};
 use async_std::net::TcpStream;
-use std::net::IpAddr;
-use std::time::Duration;
+use std::{net::IpAddr, time::Duration};
 
 zconfigurable! {
     static ref WINDOWS_GET_ADAPTERS_ADDRESSES_BUF_SIZE: u32 = 8192;
@@ -59,10 +60,8 @@ pub fn set_linger(socket: &TcpStream, dur: Option<Duration>) -> ZResult<()> {
 
     #[cfg(windows)]
     {
-        use std::convert::TryInto;
-        use std::os::windows::io::AsRawSocket;
-        use winapi::um::winsock2;
-        use winapi::um::ws2tcpip;
+        use std::{convert::TryInto, os::windows::io::AsRawSocket};
+        use winapi::um::{winsock2, ws2tcpip};
 
         let raw_socket = socket.as_raw_socket();
         let linger = match dur {

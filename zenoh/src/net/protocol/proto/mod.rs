@@ -24,9 +24,7 @@ pub use msg_reader::*;
 pub use msg_shm::*;
 pub use msg_writer::*;
 
-use super::core;
-use super::io;
-use super::link;
+use super::{core, io, link};
 
 // pub fn compare_times(a: &Option<DataInfo>, b: &Option<DataInfo>) -> i8 {
 //     match (a, b) {

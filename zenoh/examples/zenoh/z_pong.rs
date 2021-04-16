@@ -11,8 +11,7 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use async_std::future;
-use async_std::stream::StreamExt;
+use async_std::{future, stream::StreamExt};
 use clap::{App, Arg};
 use std::convert::{TryFrom, TryInto};
 use zenoh::*;

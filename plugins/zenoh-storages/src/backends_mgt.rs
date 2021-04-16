@@ -12,14 +12,14 @@
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
 use super::storages_mgt::*;
-use async_std::channel::{bounded, Sender};
-use async_std::sync::{Arc, RwLock};
-use async_std::task;
-use futures::prelude::*;
-use futures::select;
+use async_std::{
+    channel::{bounded, Sender},
+    sync::{Arc, RwLock},
+    task,
+};
+use futures::{prelude::*, select};
 use log::{debug, error, trace, warn};
-use std::collections::HashMap;
-use std::convert::TryFrom;
+use std::{collections::HashMap, convert::TryFrom};
 use zenoh::{ChangeKind, Path, PathExpr, Selector, Value, ZError, ZErrorKind, ZResult, Zenoh};
 use zenoh_backend_traits::{
     IncomingDataInterceptor, OutgoingDataInterceptor, PROP_STORAGE_PATH_EXPR,

@@ -11,9 +11,11 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use super::core::{PeerId, ZInt, ZINT_MAX_BYTES};
-use super::link::Locator;
-use super::{ArcSlice, RBuf, WBuf};
+use super::{
+    core::{PeerId, ZInt, ZINT_MAX_BYTES},
+    link::Locator,
+    ArcSlice, RBuf, WBuf,
+};
 
 macro_rules! read_zint {
     ($buf:expr, $res:ty) => {

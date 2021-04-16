@@ -11,23 +11,25 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use async_std::prelude::*;
-use async_std::sync::Arc;
-use async_std::task;
+use async_std::{prelude::*, sync::Arc, task};
 use async_trait::async_trait;
-use std::io::Cursor;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::Duration;
-use zenoh::net::protocol::core::{whatami, CongestionControl, PeerId, Reliability, ResKey};
-use zenoh::net::protocol::io::RBuf;
-use zenoh::net::protocol::link::tls::{
-    internal::pemfile, ClientConfig, NoClientAuth, ServerConfig,
+use std::{
+    io::Cursor,
+    sync::atomic::{AtomicUsize, Ordering},
+    time::Duration,
 };
-use zenoh::net::protocol::link::{Link, Locator, LocatorProperty};
-use zenoh::net::protocol::proto::ZenohMessage;
-use zenoh::net::protocol::session::{
-    Session, SessionDispatcher, SessionEventHandler, SessionHandler, SessionManager,
-    SessionManagerConfig, SessionManagerOptionalConfig,
+use zenoh::net::protocol::{
+    core::{whatami, CongestionControl, PeerId, Reliability, ResKey},
+    io::RBuf,
+    link::{
+        tls::{internal::pemfile, ClientConfig, NoClientAuth, ServerConfig},
+        Link, Locator, LocatorProperty,
+    },
+    proto::ZenohMessage,
+    session::{
+        Session, SessionDispatcher, SessionEventHandler, SessionHandler, SessionManager,
+        SessionManagerConfig, SessionManagerOptionalConfig,
+    },
 };
 use zenoh_util::core::ZResult;
 

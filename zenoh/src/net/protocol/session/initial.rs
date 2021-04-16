@@ -11,20 +11,22 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use super::authenticator::{
-    AuthenticatedPeerLink, AuthenticatedPeerSession, PeerAuthenticatorOutput,
+use super::{
+    authenticator::{AuthenticatedPeerLink, AuthenticatedPeerSession, PeerAuthenticatorOutput},
+    core::{PeerId, Property, WhatAmI, ZInt},
+    defaults::SESSION_SEQ_NUM_RESOLUTION,
+    io::{RBuf, WBuf},
+    link::{Link, Locator},
+    proto::{
+        smsg, Attachment, Close, InitAck, InitSyn, OpenAck, OpenSyn, SessionBody, SessionMessage,
+    },
+    Opened, Session, SessionManager,
 };
-use super::core::{PeerId, Property, WhatAmI, ZInt};
-use super::defaults::SESSION_SEQ_NUM_RESOLUTION;
-use super::io::{RBuf, WBuf};
-use super::link::{Link, Locator};
-use super::proto::{
-    smsg, Attachment, Close, InitAck, InitSyn, OpenAck, OpenSyn, SessionBody, SessionMessage,
-};
-use super::{Opened, Session, SessionManager};
 use rand::Rng;
-use zenoh_util::core::{ZError, ZErrorKind, ZResult};
-use zenoh_util::{zasynclock, zerror};
+use zenoh_util::{
+    core::{ZError, ZErrorKind, ZResult},
+    zasynclock, zerror,
+};
 
 type IError = (ZError, Option<u8>);
 type IResult<T> = Result<T, IError>;

@@ -14,8 +14,7 @@
 use async_std::task::sleep;
 use clap::{App, Arg};
 use std::time::Duration;
-use zenoh::net::*;
-use zenoh::Properties;
+use zenoh::{net::*, Properties};
 
 #[async_std::main]
 async fn main() {

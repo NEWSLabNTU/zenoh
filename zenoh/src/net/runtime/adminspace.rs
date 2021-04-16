@@ -10,22 +10,27 @@
 //
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
-use super::plugins::PluginsMgr;
-use super::protocol::{
-    core::{
-        queryable::EVAL, rname, CongestionControl, PeerId, QueryConsolidation, QueryTarget,
-        Reliability, ResKey, SubInfo, ZInt,
+use super::{
+    plugins::PluginsMgr,
+    protocol::{
+        core::{
+            queryable::EVAL, rname, CongestionControl, PeerId, QueryConsolidation, QueryTarget,
+            Reliability, ResKey, SubInfo, ZInt,
+        },
+        io::RBuf,
+        proto::{encoding, DataInfo, RoutingContext},
     },
-    io::RBuf,
-    proto::{encoding, DataInfo, RoutingContext},
+    routing::{face::Face, OutSession},
+    Runtime,
 };
-use super::routing::face::Face;
-use super::routing::OutSession;
-use super::Runtime;
-use async_std::sync::{Arc, Mutex};
-use async_std::task;
-use futures::future;
-use futures::future::{BoxFuture, FutureExt};
+use async_std::{
+    sync::{Arc, Mutex},
+    task,
+};
+use futures::{
+    future,
+    future::{BoxFuture, FutureExt},
+};
 use log::{error, trace};
 use serde_json::json;
 use std::collections::HashMap;

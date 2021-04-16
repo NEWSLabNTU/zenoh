@@ -11,9 +11,7 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use super::core::*;
-use super::io::WBuf;
-use super::msg::*;
+use super::{core::*, io::WBuf, msg::*};
 use zenoh_util::zcheck;
 
 impl WBuf {

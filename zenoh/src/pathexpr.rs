@@ -11,13 +11,18 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use crate::net::utils::resource_name;
-use crate::net::ResKey;
-use crate::Path;
-use std::convert::{From, TryFrom};
-use std::fmt;
-use zenoh_util::core::{ZError, ZErrorKind, ZResult};
-use zenoh_util::zerror;
+use crate::{
+    net::{utils::resource_name, ResKey},
+    Path,
+};
+use std::{
+    convert::{From, TryFrom},
+    fmt,
+};
+use zenoh_util::{
+    core::{ZError, ZErrorKind, ZResult},
+    zerror,
+};
 
 /// A zenoh Path Expression used to express a selection of [`Path`]s.
 ///

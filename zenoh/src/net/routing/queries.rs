@@ -13,18 +13,24 @@
 //
 use async_std::sync::Arc;
 use petgraph::graph::NodeIndex;
-use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
+use std::{
+    borrow::Cow,
+    collections::{HashMap, HashSet},
+};
 use zenoh_util::sync::get_mut_unchecked;
 
-use super::protocol::core::{whatami, PeerId, QueryConsolidation, QueryTarget, ResKey, ZInt};
-use super::protocol::io::RBuf;
-use super::protocol::proto::{DataInfo, RoutingContext};
+use super::protocol::{
+    core::{whatami, PeerId, QueryConsolidation, QueryTarget, ResKey, ZInt},
+    io::RBuf,
+    proto::{DataInfo, RoutingContext},
+};
 
-use super::face::FaceState;
-use super::network::Network;
-use super::resource::{elect_router, Resource, Route, SessionContext};
-use super::router::Tables;
+use super::{
+    face::FaceState,
+    network::Network,
+    resource::{elect_router, Resource, Route, SessionContext},
+    router::Tables,
+};
 
 pub(crate) struct Query {
     src_face: Arc<FaceState>,

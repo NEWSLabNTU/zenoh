@@ -11,20 +11,22 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use super::core::{PeerId, Property, ZInt};
-use super::io::{ChunkHeader, RBuf, SharedMemoryBuf, SharedMemoryManager, WBuf};
 use super::{
-    attachment, AuthenticatedPeerLink, PeerAuthenticator, PeerAuthenticatorOutput,
-    PeerAuthenticatorTrait,
+    attachment,
+    core::{PeerId, Property, ZInt},
+    io::{ChunkHeader, RBuf, SharedMemoryBuf, SharedMemoryManager, WBuf},
+    AuthenticatedPeerLink, PeerAuthenticator, PeerAuthenticatorOutput, PeerAuthenticatorTrait,
 };
 use async_std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use rand::{Rng, SeedableRng};
 use std::convert::TryInto;
-use zenoh_util::core::{ZError, ZErrorKind, ZResult};
-use zenoh_util::crypto::PseudoRng;
-use zenoh_util::properties::config::*;
-use zenoh_util::{zasynclock, zcheck};
+use zenoh_util::{
+    core::{ZError, ZErrorKind, ZResult},
+    crypto::PseudoRng,
+    properties::config::*,
+    zasynclock, zcheck,
+};
 
 const WBUF_SIZE: usize = 64;
 const SHM_VERSION: ZInt = 0;

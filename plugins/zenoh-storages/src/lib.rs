@@ -13,16 +13,16 @@
 //
 #![recursion_limit = "512"]
 
-use async_std::channel::Sender;
-use async_std::sync::Arc;
+use async_std::{channel::Sender, sync::Arc};
 use clap::{Arg, ArgMatches};
 use futures::prelude::*;
 use libloading::Symbol;
 use log::{debug, error, warn};
-use std::collections::HashMap;
-use std::convert::TryFrom;
-use zenoh::net::runtime::Runtime;
-use zenoh::{ChangeKind, Path, Properties, Selector, Value, ZError, ZErrorKind, ZResult, Zenoh};
+use std::{collections::HashMap, convert::TryFrom};
+use zenoh::{
+    net::runtime::Runtime, ChangeKind, Path, Properties, Selector, Value, ZError, ZErrorKind,
+    ZResult, Zenoh,
+};
 use zenoh_backend_traits::{Backend, PROP_STORAGE_PATH_EXPR};
 use zenoh_util::{zerror, LibLoader};
 

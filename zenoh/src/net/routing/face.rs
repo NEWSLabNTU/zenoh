@@ -12,18 +12,21 @@
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
 use async_std::sync::{Arc, RwLock};
-use std::collections::HashMap;
-use std::fmt;
+use std::{collections::HashMap, fmt};
 use zenoh_util::zasyncwrite;
 
-use super::protocol::core::{
-    whatami, CongestionControl, PeerId, QueryConsolidation, QueryTarget, Reliability, ResKey,
-    SubInfo, WhatAmI, ZInt,
+use super::{
+    protocol::{
+        core::{
+            whatami, CongestionControl, PeerId, QueryConsolidation, QueryTarget, Reliability,
+            ResKey, SubInfo, WhatAmI, ZInt,
+        },
+        io::RBuf,
+        proto::{DataInfo, RoutingContext},
+    },
+    router::*,
+    OutSession,
 };
-use super::protocol::io::RBuf;
-use super::protocol::proto::{DataInfo, RoutingContext};
-use super::router::*;
-use super::OutSession;
 
 pub struct FaceState {
     pub(super) id: usize,

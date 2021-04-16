@@ -11,12 +11,15 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use crate::net::encoding::*;
-use crate::net::{RBuf, Sample, WBuf, ZInt};
-use crate::workspace::ChangeKind;
-use crate::Properties;
-use zenoh_util::core::{ZError, ZErrorKind, ZResult};
-use zenoh_util::{zerror, zerror2};
+use crate::{
+    net::{encoding::*, RBuf, Sample, WBuf, ZInt},
+    workspace::ChangeKind,
+    Properties,
+};
+use zenoh_util::{
+    core::{ZError, ZErrorKind, ZResult},
+    zerror, zerror2,
+};
 
 /// A user value that is associated with a [Path](super::Path) in zenoh.
 #[derive(Clone, Debug)]

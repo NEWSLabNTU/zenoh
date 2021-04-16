@@ -28,5 +28,4 @@ mod shm;
 #[cfg(feature = "zero-copy")]
 pub use shm::*;
 
-use super::core;
-use super::link;
+use super::{core, link};

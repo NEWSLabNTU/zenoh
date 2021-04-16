@@ -11,21 +11,22 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use async_std::sync::Arc;
-use async_std::task;
+use async_std::{sync::Arc, task};
 use async_trait::async_trait;
 use std::convert::TryInto;
 use uhlc::HLC;
-use zenoh::net::protocol::core::rname::intersect;
-use zenoh::net::protocol::core::{
-    whatami, CongestionControl, PeerId, QueryConsolidation, QueryTarget, Reliability, ResKey,
-    SubInfo, SubMode, ZInt,
+use zenoh::net::{
+    protocol::{
+        core::{
+            rname::intersect, whatami, CongestionControl, PeerId, QueryConsolidation, QueryTarget,
+            Reliability, ResKey, SubInfo, SubMode, ZInt,
+        },
+        io::RBuf,
+        proto::{DataInfo, RoutingContext},
+        session::{DummyPrimitives, Primitives},
+    },
+    routing::{router::*, OutSession},
 };
-use zenoh::net::protocol::io::RBuf;
-use zenoh::net::protocol::proto::{DataInfo, RoutingContext};
-use zenoh::net::protocol::session::{DummyPrimitives, Primitives};
-use zenoh::net::routing::router::*;
-use zenoh::net::routing::OutSession;
 
 #[test]
 fn base_test() {

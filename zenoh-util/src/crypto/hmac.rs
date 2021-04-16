@@ -11,8 +11,10 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use crate::core::{ZError, ZErrorKind, ZResult};
-use crate::zerror2;
+use crate::{
+    core::{ZError, ZErrorKind, ZResult},
+    zerror2,
+};
 use hmac::{Hmac, Mac, NewMac};
 use sha3::Sha3_256;
 

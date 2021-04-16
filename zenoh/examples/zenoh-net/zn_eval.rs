@@ -12,11 +12,11 @@
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
 use clap::{App, Arg};
-use futures::prelude::*;
-use futures::select;
-use zenoh::net::queryable::EVAL;
-use zenoh::net::*;
-use zenoh::Properties;
+use futures::{prelude::*, select};
+use zenoh::{
+    net::{queryable::EVAL, *},
+    Properties,
+};
 
 #[async_std::main]
 async fn main() {

@@ -11,16 +11,17 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use async_std::channel::{bounded, Sender};
-use async_std::sync::{Arc, RwLock};
-use async_std::task;
-use futures::prelude::*;
-use futures::select;
-use log::{debug, error, trace, warn};
-use zenoh::net::{
-    queryable, QueryConsolidation, QueryTarget, Reliability, SubInfo, SubMode, Target,
+use async_std::{
+    channel::{bounded, Sender},
+    sync::{Arc, RwLock},
+    task,
 };
-use zenoh::{Path, PathExpr, ZResult, Zenoh};
+use futures::{prelude::*, select};
+use log::{debug, error, trace, warn};
+use zenoh::{
+    net::{queryable, QueryConsolidation, QueryTarget, Reliability, SubInfo, SubMode, Target},
+    Path, PathExpr, ZResult, Zenoh,
+};
 use zenoh_backend_traits::{IncomingDataInterceptor, OutgoingDataInterceptor, Query};
 
 pub(crate) async fn start_storage(

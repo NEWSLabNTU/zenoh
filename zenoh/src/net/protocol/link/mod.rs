@@ -22,16 +22,20 @@ mod udp;
 #[cfg(all(feature = "transport_unixsock-stream", target_family = "unix"))]
 mod unixsock_stream;
 
-use super::io::{RBuf, WBuf};
-use super::proto::SessionMessage;
-use super::session;
+use super::{
+    io::{RBuf, WBuf},
+    proto::SessionMessage,
+    session,
+};
 use async_std::sync::Arc;
 use async_trait::async_trait;
 pub use locator::*;
 pub use manager::*;
-use std::cmp::PartialEq;
-use std::fmt;
-use std::hash::{Hash, Hasher};
+use std::{
+    cmp::PartialEq,
+    fmt,
+    hash::{Hash, Hasher},
+};
 #[cfg(feature = "transport_tcp")]
 use tcp::LinkTcp;
 #[cfg(feature = "transport_tls")]

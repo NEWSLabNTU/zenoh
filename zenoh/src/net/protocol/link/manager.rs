@@ -11,7 +11,6 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use super::session::SessionManager;
 #[cfg(feature = "transport_tcp")]
 use super::tcp::LinkManagerTcp;
 #[cfg(feature = "transport_tls")]
@@ -20,7 +19,7 @@ use super::tls::LinkManagerTls;
 use super::udp::LinkManagerUdp;
 #[cfg(all(feature = "transport_unixsock-stream", target_family = "unix"))]
 use super::unixsock_stream::LinkManagerUnixSocketStream;
-use super::{LinkManager, LocatorProtocol};
+use super::{session::SessionManager, LinkManager, LocatorProtocol};
 use async_std::sync::Arc;
 
 pub struct LinkManagerBuilder;

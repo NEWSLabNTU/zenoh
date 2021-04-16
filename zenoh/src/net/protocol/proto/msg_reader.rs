@@ -11,8 +11,7 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use super::core::*;
-use super::io::RBuf;
+use super::{core::*, io::RBuf};
 
 use super::msg::*;
 
@@ -523,8 +522,7 @@ impl RBuf {
     }
 
     fn read_declaration(&mut self) -> Option<Declaration> {
-        use super::zmsg::declaration::id::*;
-        use super::Declaration::*;
+        use super::{zmsg::declaration::id::*, Declaration::*};
 
         macro_rules! read_key_delc {
             ($buf:ident, $header:ident, $type:ident) => {{
@@ -582,8 +580,7 @@ impl RBuf {
     }
 
     fn read_submode(&mut self) -> Option<(SubMode, Option<Period>)> {
-        use super::zmsg::declaration::flag::*;
-        use super::zmsg::declaration::id::*;
+        use super::zmsg::declaration::{flag::*, id::*};
 
         let mode_flag = self.read()?;
         let mode = match mode_flag & !PERIOD {

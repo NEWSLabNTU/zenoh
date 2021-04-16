@@ -18,16 +18,21 @@ pub mod queries;
 pub mod resource;
 pub mod router;
 
-use super::super::Session;
-use super::protocol;
-use super::protocol::core::{
-    CongestionControl, PeerId, QueryConsolidation, QueryTarget, Reliability, ResKey, SubInfo, ZInt,
+use super::{
+    super::Session,
+    protocol,
+    protocol::{
+        core::{
+            CongestionControl, PeerId, QueryConsolidation, QueryTarget, Reliability, ResKey,
+            SubInfo, ZInt,
+        },
+        io::RBuf,
+        proto::{DataInfo, RoutingContext},
+        session::{Mux, Primitives},
+    },
+    runtime,
+    runtime::AdminSpace,
 };
-use super::protocol::io::RBuf;
-use super::protocol::proto::{DataInfo, RoutingContext};
-use super::protocol::session::{Mux, Primitives};
-use super::runtime;
-use super::runtime::AdminSpace;
 use async_std::sync::Arc;
 
 #[allow(clippy::enum_variant_names)]

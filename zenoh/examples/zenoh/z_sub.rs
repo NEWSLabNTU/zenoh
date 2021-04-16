@@ -12,8 +12,7 @@
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
 use clap::{App, Arg};
-use futures::prelude::*;
-use futures::select;
+use futures::{prelude::*, select};
 use std::convert::{TryFrom, TryInto};
 use zenoh::*;
 

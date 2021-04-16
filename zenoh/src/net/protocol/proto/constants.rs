@@ -36,8 +36,10 @@ pub mod encoding {
     use super::ZInt;
     use http_types::Mime;
     use std::str::FromStr;
-    use zenoh_util::core::{ZError, ZErrorKind, ZResult};
-    use zenoh_util::zerror;
+    use zenoh_util::{
+        core::{ZError, ZErrorKind, ZResult},
+        zerror,
+    };
 
     lazy_static! {
     static ref MIMES: [Mime; 20] = [

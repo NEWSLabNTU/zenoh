@@ -11,16 +11,20 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use async_std::channel::{bounded, Receiver, RecvError, Sender};
-use async_std::prelude::*;
-use async_std::sync::{Arc, Mutex, Weak};
-use async_std::task;
+use async_std::{
+    channel::{bounded, Receiver, RecvError, Sender},
+    prelude::*,
+    sync::{Arc, Mutex, Weak},
+    task,
+};
 use async_trait::async_trait;
 
-use std::cmp::Ordering as ComparisonOrdering;
-use std::collections::BinaryHeap;
-use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
-use std::time::{Duration, Instant};
+use std::{
+    cmp::Ordering as ComparisonOrdering,
+    collections::BinaryHeap,
+    sync::atomic::{AtomicBool, Ordering as AtomicOrdering},
+    time::{Duration, Instant},
+};
 
 use crate::zconfigurable;
 

@@ -14,23 +14,27 @@
 mod adminspace;
 pub mod orchestrator;
 
-use super::plugins;
-use super::protocol;
-use super::routing;
+use super::{plugins, protocol, routing};
 
-use super::protocol::core::{whatami, PeerId};
-use super::protocol::session::{
-    SessionDispatcher, SessionManager, SessionManagerConfig, SessionManagerOptionalConfig,
+use super::{
+    protocol::{
+        core::{whatami, PeerId},
+        session::{
+            SessionDispatcher, SessionManager, SessionManagerConfig, SessionManagerOptionalConfig,
+        },
+    },
+    routing::router::Router,
 };
-use super::routing::router::Router;
 pub use adminspace::AdminSpace;
 use async_std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use orchestrator::SessionOrchestrator;
 use uhlc::HLC;
-use zenoh_util::core::{ZError, ZErrorKind, ZResult};
-use zenoh_util::properties::config::*;
-use zenoh_util::sync::get_mut_unchecked;
-use zenoh_util::{zasyncwrite, zerror, zerror2};
+use zenoh_util::{
+    core::{ZError, ZErrorKind, ZResult},
+    properties::config::*,
+    sync::get_mut_unchecked,
+    zasyncwrite, zerror, zerror2,
+};
 
 pub struct RuntimeState {
     pub pid: PeerId,

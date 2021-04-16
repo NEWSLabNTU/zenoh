@@ -17,22 +17,22 @@ mod rx;
 mod seq_num;
 mod tx;
 
-use super::core;
-use super::io;
-use super::proto;
-use super::session;
+use super::{core, io, proto, session};
 
-use super::core::{PeerId, Reliability, WhatAmI, ZInt};
-use super::link::Link;
-use super::proto::{SessionMessage, ZenohMessage};
-use super::session::defaults::QUEUE_PRIO_DATA;
-use super::session::{SessionEventDispatcher, SessionManager};
+use super::{
+    core::{PeerId, Reliability, WhatAmI, ZInt},
+    link::Link,
+    proto::{SessionMessage, ZenohMessage},
+    session::{defaults::QUEUE_PRIO_DATA, SessionEventDispatcher, SessionManager},
+};
 use async_std::sync::{Arc, Mutex, MutexGuard, RwLock};
 use defragmentation::*;
 use link::*;
 pub(super) use seq_num::*;
-use zenoh_util::core::{ZError, ZErrorKind, ZResult};
-use zenoh_util::{zasyncread, zasyncwrite, zerror};
+use zenoh_util::{
+    core::{ZError, ZErrorKind, ZResult},
+    zasyncread, zasyncwrite, zerror,
+};
 
 macro_rules! zlinkget {
     ($guard:expr, $link:expr) => {

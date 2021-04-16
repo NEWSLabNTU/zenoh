@@ -11,29 +11,27 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use super::session::SessionManager;
-use super::{Link, LinkManagerTrait, Locator, LocatorProperty};
-pub use async_rustls::rustls::*;
-pub use async_rustls::webpki::*;
+use super::{session::SessionManager, Link, LinkManagerTrait, Locator, LocatorProperty};
 use async_rustls::{rustls::internal::pemfile, TlsAcceptor, TlsConnector, TlsStream};
-use async_std::channel::{bounded, Receiver, Sender};
-use async_std::fs;
-use async_std::net::{SocketAddr, TcpListener, TcpStream, ToSocketAddrs};
-use async_std::prelude::*;
-use async_std::sync::{Arc, Barrier, Mutex, RwLock};
-use async_std::task;
+pub use async_rustls::{rustls::*, webpki::*};
+use async_std::{
+    channel::{bounded, Receiver, Sender},
+    fs,
+    net::{SocketAddr, TcpListener, TcpStream, ToSocketAddrs},
+    prelude::*,
+    sync::{Arc, Barrier, Mutex, RwLock},
+    task,
+};
 use async_trait::async_trait;
-use std::cell::UnsafeCell;
-use std::collections::HashMap;
-use std::convert::TryInto;
-use std::fmt;
-use std::io::Cursor;
-use std::net::Shutdown;
-use std::str::FromStr;
-use std::time::Duration;
-use zenoh_util::core::{ZError, ZErrorKind, ZResult};
-use zenoh_util::properties::config::*;
-use zenoh_util::{zasyncread, zasyncwrite, zerror, zerror2};
+use std::{
+    cell::UnsafeCell, collections::HashMap, convert::TryInto, fmt, io::Cursor, net::Shutdown,
+    str::FromStr, time::Duration,
+};
+use zenoh_util::{
+    core::{ZError, ZErrorKind, ZResult},
+    properties::config::*,
+    zasyncread, zasyncwrite, zerror, zerror2,
+};
 
 // Default MTU (TLS PDU) in bytes.
 // NOTE: Since TLS is a byte-stream oriented transport, theoretically it has

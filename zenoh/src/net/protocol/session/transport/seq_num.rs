@@ -13,8 +13,10 @@
 //
 use super::core::ZInt;
 
-use zenoh_util::core::{ZError, ZErrorKind, ZResult};
-use zenoh_util::zerror;
+use zenoh_util::{
+    core::{ZError, ZErrorKind, ZResult},
+    zerror,
+};
 
 /// Sequence Number
 ///

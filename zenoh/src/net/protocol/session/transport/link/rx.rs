@@ -11,9 +11,11 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use super::core::PeerId;
-use super::proto::{Close, SessionBody, SessionMessage};
-use super::SessionTransportLink;
+use super::{
+    core::PeerId,
+    proto::{Close, SessionBody, SessionMessage},
+    SessionTransportLink,
+};
 use async_std::task;
 
 /*************************************/

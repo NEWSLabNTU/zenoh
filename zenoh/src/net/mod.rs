@@ -70,8 +70,7 @@ pub mod protocol;
 pub mod routing;
 pub mod runtime;
 
-use async_std::channel::bounded;
-use async_std::net::UdpSocket;
+use async_std::{channel::bounded, net::UdpSocket};
 use futures::prelude::*;
 use log::{debug, trace};
 use protocol::core::WhatAmI;
@@ -102,8 +101,7 @@ pub use zenoh_util::properties::config::ConfigProperties;
 
 pub mod utils {
     pub mod resource_name {
-        pub use super::super::protocol::core::rname::include;
-        pub use super::super::protocol::core::rname::intersect;
+        pub use super::super::protocol::core::rname::{include, intersect};
     }
 }
 

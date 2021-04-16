@@ -14,9 +14,7 @@
 #[cfg(feature = "zero-copy")]
 use super::shm::{SharedMemoryBuf, SharedMemoryBufInfo, SharedMemoryManager};
 use super::ArcSlice;
-use std::fmt;
-use std::io;
-use std::io::IoSlice;
+use std::{fmt, io, io::IoSlice};
 
 #[derive(Clone, Copy, PartialEq)]
 pub struct RBufPos {

@@ -11,13 +11,13 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use crate::net::Query;
-use crate::{Path, PathExpr, Properties};
+use crate::{net::Query, Path, PathExpr, Properties};
 use regex::Regex;
-use std::convert::TryFrom;
-use std::fmt;
-use zenoh_util::core::{ZError, ZErrorKind, ZResult};
-use zenoh_util::zerror;
+use std::{convert::TryFrom, fmt};
+use zenoh_util::{
+    core::{ZError, ZErrorKind, ZResult},
+    zerror,
+};
 
 /// The "starttime" property key for time-range selection
 pub const PROP_STARTTIME: &str = "starttime";

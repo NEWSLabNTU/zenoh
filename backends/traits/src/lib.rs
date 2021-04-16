@@ -144,8 +144,7 @@
 use async_std::sync::{Arc, RwLock};
 use async_trait::async_trait;
 use std::convert::TryFrom;
-use zenoh::net::Sample;
-use zenoh::{Properties, Selector, Value, ZError, ZResult};
+use zenoh::{net::Sample, Properties, Selector, Value, ZError, ZResult};
 
 pub mod utils;
 

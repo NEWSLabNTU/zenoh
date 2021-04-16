@@ -14,9 +14,10 @@
 use async_std::future;
 use clap::{App, Arg};
 use std::time::Instant;
-use zenoh::net::ResKey::*;
-use zenoh::net::*;
-use zenoh::Properties;
+use zenoh::{
+    net::{ResKey::*, *},
+    Properties,
+};
 
 #[async_std::main]
 async fn main() {

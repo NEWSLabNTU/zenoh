@@ -11,11 +11,12 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use async_std::sync::Arc;
-use async_std::task;
+use async_std::{sync::Arc, task};
 use async_trait::async_trait;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::{Duration, Instant};
+use std::{
+    sync::atomic::{AtomicUsize, Ordering},
+    time::{Duration, Instant},
+};
 use zenoh_util::collections::{Timed, TimedEvent, Timer};
 
 #[derive(Clone)]

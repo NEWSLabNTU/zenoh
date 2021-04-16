@@ -12,20 +12,22 @@
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
 use super::{
-    attachment, AuthenticatedPeerLink, PeerAuthenticator, PeerAuthenticatorOutput,
-    PeerAuthenticatorTrait,
+    attachment, AuthenticatedPeerLink, Locator, PeerAuthenticator, PeerAuthenticatorOutput,
+    PeerAuthenticatorTrait, PeerId, Property, RBuf, WBuf, ZInt,
 };
-use super::{Locator, PeerId, Property, RBuf, WBuf, ZInt};
-use async_std::fs;
-use async_std::sync::{Arc, Mutex, RwLock};
+use async_std::{
+    fs,
+    sync::{Arc, Mutex, RwLock},
+};
 use async_trait::async_trait;
 use rand::{Rng, SeedableRng};
 use std::collections::{HashMap, HashSet};
-use zenoh_util::core::{ZError, ZErrorKind, ZResult};
-use zenoh_util::crypto::{hmac, PseudoRng};
-use zenoh_util::properties::config::*;
-use zenoh_util::properties::Properties;
-use zenoh_util::{zasynclock, zasyncread, zasyncwrite};
+use zenoh_util::{
+    core::{ZError, ZErrorKind, ZResult},
+    crypto::{hmac, PseudoRng},
+    properties::{config::*, Properties},
+    zasynclock, zasyncread, zasyncwrite,
+};
 
 const WBUF_SIZE: usize = 64;
 const USRPWD_VERSION: ZInt = 0;

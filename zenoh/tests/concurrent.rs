@@ -11,20 +11,26 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use async_std::prelude::*;
-use async_std::sync::{Arc, Barrier};
-use async_std::task;
+use async_std::{
+    prelude::*,
+    sync::{Arc, Barrier},
+    task,
+};
 use async_trait::async_trait;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::Duration;
+use std::{
+    sync::atomic::{AtomicUsize, Ordering},
+    time::Duration,
+};
 
-use zenoh::net::protocol::core::{whatami, CongestionControl, PeerId, Reliability, ResKey, ZInt};
-use zenoh::net::protocol::io::RBuf;
-use zenoh::net::protocol::link::{Link, Locator};
-use zenoh::net::protocol::proto::ZenohMessage;
-use zenoh::net::protocol::session::{
-    Session, SessionDispatcher, SessionEventHandler, SessionHandler, SessionManager,
-    SessionManagerConfig, SessionManagerOptionalConfig,
+use zenoh::net::protocol::{
+    core::{whatami, CongestionControl, PeerId, Reliability, ResKey, ZInt},
+    io::RBuf,
+    link::{Link, Locator},
+    proto::ZenohMessage,
+    session::{
+        Session, SessionDispatcher, SessionEventHandler, SessionHandler, SessionManager,
+        SessionManagerConfig, SessionManagerOptionalConfig,
+    },
 };
 
 use zenoh_util::core::ZResult;

@@ -19,13 +19,12 @@ use super::tls::{LocatorPropertyTls, LocatorTls};
 use super::udp::{LocatorPropertyUdp, LocatorUdp};
 #[cfg(all(feature = "transport_unixsock-stream", target_family = "unix"))]
 use super::unixsock_stream::{LocatorPropertyUnixSocketStream, LocatorUnixSocketStream};
-use std::cmp::PartialEq;
-use std::fmt;
-use std::hash::Hash;
-use std::str::FromStr;
-use zenoh_util::core::{ZError, ZErrorKind, ZResult};
-use zenoh_util::properties::config::ConfigProperties;
-use zenoh_util::zerror;
+use std::{cmp::PartialEq, fmt, hash::Hash, str::FromStr};
+use zenoh_util::{
+    core::{ZError, ZErrorKind, ZResult},
+    properties::config::ConfigProperties,
+    zerror,
+};
 
 /*************************************/
 /*        LOCATOR PROTOCOL           */

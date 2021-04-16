@@ -11,13 +11,12 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use super::info::*;
-use super::routing::face::Face;
-use super::*;
-use async_std::channel::{bounded, Receiver, Sender};
-use async_std::sync::Arc;
-use async_std::sync::RwLock;
-use async_std::task;
+use super::{info::*, routing::face::Face, *};
+use async_std::{
+    channel::{bounded, Receiver, Sender},
+    sync::{Arc, RwLock},
+    task,
+};
 use log::{error, trace, warn};
 use protocol::{
     core::{
@@ -29,12 +28,16 @@ use protocol::{
 };
 use routing::OutSession;
 use runtime::Runtime;
-use std::collections::HashMap;
-use std::fmt;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::Duration;
-use zenoh_util::core::{ZError, ZErrorKind, ZResult};
-use zenoh_util::{zconfigurable, zerror};
+use std::{
+    collections::HashMap,
+    fmt,
+    sync::atomic::{AtomicUsize, Ordering},
+    time::Duration,
+};
+use zenoh_util::{
+    core::{ZError, ZErrorKind, ZResult},
+    zconfigurable, zerror,
+};
 
 zconfigurable! {
     static ref API_DATA_RECEPTION_CHANNEL_SIZE: usize = 256;

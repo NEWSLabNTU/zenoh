@@ -17,9 +17,11 @@ extern crate criterion;
 use async_std::sync::Arc;
 use criterion::Criterion;
 
-use zenoh::net::protocol::core::{CongestionControl, PeerId, Reliability, ResKey};
-use zenoh::net::protocol::io::RBuf;
-use zenoh::net::protocol::proto::{DataInfo, ZenohMessage};
+use zenoh::net::protocol::{
+    core::{CongestionControl, PeerId, Reliability, ResKey},
+    io::RBuf,
+    proto::{DataInfo, ZenohMessage},
+};
 
 fn consume_message(msg: ZenohMessage) {
     drop(msg);

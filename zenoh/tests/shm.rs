@@ -13,20 +13,26 @@
 //
 #[cfg(feature = "zero-copy")]
 mod tests {
-    use async_std::prelude::*;
-    use async_std::sync::{Arc, Mutex};
-    use async_std::task;
+    use async_std::{
+        prelude::*,
+        sync::{Arc, Mutex},
+        task,
+    };
     use async_trait::async_trait;
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::time::Duration;
-    use zenoh::net::protocol::core::{whatami, CongestionControl, PeerId, Reliability, ResKey};
-    use zenoh::net::protocol::io::{RBuf, SharedMemoryManager};
-    use zenoh::net::protocol::link::{Link, Locator};
-    use zenoh::net::protocol::proto::{Data, ZenohBody, ZenohMessage};
-    use zenoh::net::protocol::session::authenticator::SharedMemoryAuthenticator;
-    use zenoh::net::protocol::session::{
-        Session, SessionDispatcher, SessionEventHandler, SessionHandler, SessionManager,
-        SessionManagerConfig, SessionManagerOptionalConfig,
+    use std::{
+        sync::atomic::{AtomicUsize, Ordering},
+        time::Duration,
+    };
+    use zenoh::net::protocol::{
+        core::{whatami, CongestionControl, PeerId, Reliability, ResKey},
+        io::{RBuf, SharedMemoryManager},
+        link::{Link, Locator},
+        proto::{Data, ZenohBody, ZenohMessage},
+        session::{
+            authenticator::SharedMemoryAuthenticator, Session, SessionDispatcher,
+            SessionEventHandler, SessionHandler, SessionManager, SessionManagerConfig,
+            SessionManagerOptionalConfig,
+        },
     };
     use zenoh_util::core::ZResult;
 

@@ -11,29 +11,26 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use super::core::Channel;
-use super::io::WBuf;
-use super::proto::{SessionMessage, ZenohMessage};
-use super::session::defaults::{
-    // Constants
-    QUEUE_NUM,
-    QUEUE_PRIO_CTRL,
-    QUEUE_PRIO_DATA,
-    QUEUE_PRIO_RETX,
-    QUEUE_PULL_BACKOFF,
-    // Configurable constants
-    QUEUE_SIZE_CTRL,
-    QUEUE_SIZE_DATA,
-    QUEUE_SIZE_RETX,
+use super::{
+    core::Channel,
+    io::WBuf,
+    proto::{SessionMessage, ZenohMessage},
+    session::defaults::{
+        QUEUE_NUM, QUEUE_PRIO_CTRL, QUEUE_PRIO_DATA, QUEUE_PRIO_RETX, QUEUE_PULL_BACKOFF,
+        QUEUE_SIZE_CTRL, QUEUE_SIZE_DATA, QUEUE_SIZE_RETX,
+    },
+    SeqNumGenerator, SerializationBatch,
 };
-use super::{SeqNumGenerator, SerializationBatch};
-use async_std::sync::{Arc, Mutex, MutexGuard};
-use async_std::task;
-use std::collections::VecDeque;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::Duration;
-use zenoh_util::sync::Condition;
-use zenoh_util::zasynclock;
+use async_std::{
+    sync::{Arc, Mutex, MutexGuard},
+    task,
+};
+use std::{
+    collections::VecDeque,
+    sync::atomic::{AtomicUsize, Ordering},
+    time::Duration,
+};
+use zenoh_util::{sync::Condition, zasynclock};
 
 macro_rules! zgetbatch {
     ($self:expr, $priority:expr, $stage_in:expr, $is_droppable:expr) => {
@@ -539,19 +536,25 @@ impl TransmissionPipeline {
 
 #[cfg(test)]
 mod tests {
-    use super::super::core::{CongestionControl, Reliability, ResKey, ZInt};
-    use super::super::io::RBuf;
-    use super::super::proto::{Frame, FramePayload, SessionBody, ZenohMessage};
-    use super::super::session::defaults::{
-        QUEUE_PRIO_DATA, SESSION_BATCH_SIZE, SESSION_SEQ_NUM_RESOLUTION,
+    use super::{
+        super::{
+            core::{CongestionControl, Reliability, ResKey, ZInt},
+            io::RBuf,
+            proto::{Frame, FramePayload, SessionBody, ZenohMessage},
+            session::defaults::{QUEUE_PRIO_DATA, SESSION_BATCH_SIZE, SESSION_SEQ_NUM_RESOLUTION},
+        },
+        *,
     };
-    use super::*;
-    use async_std::prelude::*;
-    use async_std::sync::{Arc, Mutex};
-    use async_std::task;
-    use std::convert::TryFrom;
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::time::{Duration, Instant};
+    use async_std::{
+        prelude::*,
+        sync::{Arc, Mutex},
+        task,
+    };
+    use std::{
+        convert::TryFrom,
+        sync::atomic::{AtomicUsize, Ordering},
+        time::{Duration, Instant},
+    };
 
     const TIMEOUT: Duration = Duration::from_secs(60);
 

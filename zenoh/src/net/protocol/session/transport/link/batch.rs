@@ -11,10 +11,12 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use super::core::{Channel, ZInt};
-use super::io::WBuf;
-use super::proto::{SessionMessage, ZenohMessage};
-use super::SeqNumGenerator;
+use super::{
+    core::{Channel, ZInt},
+    io::WBuf,
+    proto::{SessionMessage, ZenohMessage},
+    SeqNumGenerator,
+};
 use async_std::sync::{Arc, Mutex};
 
 type LengthType = u16;
@@ -314,10 +316,12 @@ mod tests {
 
     use super::*;
 
-    use super::super::core::{CongestionControl, Reliability, ResKey};
-    use super::super::io::{RBuf, WBuf};
-    use super::super::proto::{Frame, FramePayload, SessionBody, SessionMessage, ZenohMessage};
-    use super::super::session::defaults::SESSION_SEQ_NUM_RESOLUTION;
+    use super::super::{
+        core::{CongestionControl, Reliability, ResKey},
+        io::{RBuf, WBuf},
+        proto::{Frame, FramePayload, SessionBody, SessionMessage, ZenohMessage},
+        session::defaults::SESSION_SEQ_NUM_RESOLUTION,
+    };
 
     use zenoh_util::zasynclock;
 

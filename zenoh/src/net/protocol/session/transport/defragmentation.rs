@@ -11,10 +11,12 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use super::core::{Reliability, ZInt};
-use super::io::RBuf;
-use super::proto::ZenohMessage;
-use super::SeqNum;
+use super::{
+    core::{Reliability, ZInt},
+    io::RBuf,
+    proto::ZenohMessage,
+    SeqNum,
+};
 
 use zenoh_util::core::{ZError, ZErrorKind, ZResult};
 

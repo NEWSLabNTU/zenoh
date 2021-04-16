@@ -13,11 +13,14 @@
 //
 use super::ArcSlice;
 use async_std::sync::Arc;
-use std::fmt;
-use std::io;
-use std::io::IoSlice;
-use std::ops::Bound::{Excluded, Included, Unbounded};
-use std::ops::RangeBounds;
+use std::{
+    fmt, io,
+    io::IoSlice,
+    ops::{
+        Bound::{Excluded, Included, Unbounded},
+        RangeBounds,
+    },
+};
 
 // Notes:
 //  - Wbuf has 2 flavors:

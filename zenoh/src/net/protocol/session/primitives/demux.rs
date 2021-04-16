@@ -11,13 +11,17 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use super::super::super::super::routing::face::Face;
-use super::link::Link;
-use super::proto::{
-    zmsg, Data, Declaration, Declare, LinkStateList, Pull, Query, ZenohBody, ZenohMessage,
+use super::{
+    super::super::super::routing::face::Face,
+    link::Link,
+    proto::{
+        zmsg, Data, Declaration, Declare, LinkStateList, Pull, Query, ZenohBody, ZenohMessage,
+    },
 };
-use zenoh_util::core::{ZError, ZErrorKind, ZResult};
-use zenoh_util::zerror;
+use zenoh_util::{
+    core::{ZError, ZErrorKind, ZResult},
+    zerror,
+};
 
 pub struct DeMux {
     pub(crate) primitives: Face,

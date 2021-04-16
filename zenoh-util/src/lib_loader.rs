@@ -11,14 +11,18 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use crate::core::{ZError, ZErrorKind, ZResult};
-use crate::{zconfigurable, zerror, zerror2};
+use crate::{
+    core::{ZError, ZErrorKind, ZResult},
+    zconfigurable, zerror, zerror2,
+};
 use libloading::Library;
 use log::{debug, warn};
-use std::env::consts::{DLL_PREFIX, DLL_SUFFIX};
-use std::ffi::OsString;
-use std::ops::Deref;
-use std::path::PathBuf;
+use std::{
+    env::consts::{DLL_PREFIX, DLL_SUFFIX},
+    ffi::OsString,
+    ops::Deref,
+    path::PathBuf,
+};
 
 zconfigurable! {
     /// The libraries prefix for the current platform (usually: `"lib"`)

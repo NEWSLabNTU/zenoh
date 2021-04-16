@@ -12,8 +12,7 @@
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
 use async_std::task;
-use std::fmt;
-use std::hint::spin_loop;
+use std::{fmt, hint::spin_loop};
 
 const SPIN_LIMIT: usize = 6;
 const YIELD_LIMIT: usize = 10;

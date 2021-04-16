@@ -17,8 +17,7 @@ extern crate rand;
 
 use criterion::{black_box, Criterion};
 
-use zenoh::net::protocol::core::ZInt;
-use zenoh::net::protocol::io::WBuf;
+use zenoh::net::protocol::{core::ZInt, io::WBuf};
 
 fn bench_foo((v, buf): (ZInt, &mut WBuf)) {
     buf.write_zint(v);

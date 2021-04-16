@@ -11,15 +11,17 @@
 // Contributors:
 //   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 //
-use async_std::future;
-use async_std::task;
+use async_std::{future, task};
 use clap::{App, Arg, Values};
 use git_version::git_version;
-use zenoh::net::plugins::PluginsMgr;
-use zenoh::net::runtime::{AdminSpace, Runtime};
-use zenoh_util::properties::config::*;
-use zenoh_util::properties::Properties;
-use zenoh_util::LibLoader;
+use zenoh::net::{
+    plugins::PluginsMgr,
+    runtime::{AdminSpace, Runtime},
+};
+use zenoh_util::{
+    properties::{config::*, Properties},
+    LibLoader,
+};
 
 const GIT_VERSION: &str = git_version!(prefix = "v", cargo_prefix = "v");
 
