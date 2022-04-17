@@ -55,3 +55,6 @@ lto = "fat"
 codegen-units = 1
 opt-level = 3
 panic = "abort"
+
+[patch.crates-io]
+async-std = { git = "https://github.com/async-rs/async-std.git", tag = "v1.11.0" }
