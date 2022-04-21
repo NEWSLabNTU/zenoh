@@ -15,6 +15,7 @@ use futures::FutureExt;
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
+use zenoh_async_rt::block_on;
 
 pub mod backoff;
 pub use backoff::*;
@@ -112,7 +113,7 @@ impl<T> Future for ZPinBoxFuture<T> {
 impl<T> ZFuture for ZPinBoxFuture<T> {
     #[inline]
     fn wait(self) -> T {
-        async_std::task::block_on(self.0)
+        block_on(self.0)
     }
 }
 

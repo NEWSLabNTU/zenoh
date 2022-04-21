@@ -24,6 +24,7 @@ use zenoh::plugins::{Plugin, RunningPluginTrait, ZenohPlugin};
 use zenoh::prelude::*;
 use zenoh::query::{QueryConsolidation, ReplyReceiver};
 use zenoh::Session;
+use zenoh_async_rt::{sleep, spawn};
 use zenoh_core::{zerror, Result as ZResult};
 
 mod config;
@@ -155,7 +156,7 @@ impl Plugin for RestPlugin {
 
         let conf: Config = serde_json::from_value(plugin_conf.clone())
             .map_err(|e| zerror!("Plugin `{}` configuration error: {}", name, e))?;
-        async_std::task::spawn(run(runtime.clone(), conf.clone()));
+        spawn(run(runtime.clone(), conf.clone()));
         Ok(Box::new(RunningPlugin(conf)))
     }
 }
@@ -230,7 +231,7 @@ async fn query(req: Request<(Arc<Session>, String)>) -> tide::Result<Response> {
             req,
             move |req: Request<(Arc<Session>, String)>, sender: Sender| async move {
                 let key_expr = path_to_key_expr(req.url().path(), &req.state().1).to_owned();
-                async_std::task::spawn(async move {
+                spawn(async move {
                     log::debug!(
                         "Subscribe to {} for SSE stream (task {})",
                         key_expr,
@@ -250,7 +251,7 @@ async fn query(req: Request<(Arc<Session>, String)>) -> tide::Result<Response> {
                             true
                         };
                         let wait = async {
-                            async_std::task::sleep(std::time::Duration::new(10, 0)).await;
+                            sleep(std::time::Duration::new(10, 0)).await;
                             false
                         };
                         if !async_std::prelude::FutureExt::race(send, wait).await {

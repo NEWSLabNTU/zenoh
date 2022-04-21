@@ -12,11 +12,11 @@
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
 use async_std::prelude::FutureExt;
-use async_std::task;
 use std::any::Any;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
+use zenoh_async_rt::{block_on, sleep};
 use zenoh_buffers::ZBuf;
 use zenoh_core::zasync_executor_init;
 use zenoh_core::Result as ZResult;
@@ -236,7 +236,7 @@ async fn close_transport(
 
     ztimeout!(async {
         while !router_manager.get_transports().is_empty() {
-            task::sleep(SLEEP).await;
+            sleep(SLEEP).await;
         }
     });
 
@@ -247,13 +247,13 @@ async fn close_transport(
     }
 
     // Wait a little bit
-    task::sleep(SLEEP).await;
+    sleep(SLEEP).await;
 
     ztimeout!(router_manager.close());
     ztimeout!(client_manager.close());
 
     // Wait a little bit
-    task::sleep(SLEEP).await;
+    sleep(SLEEP).await;
 }
 
 async fn single_run(
@@ -291,12 +291,12 @@ async fn single_run(
     // Wait for the messages to arrive to the other side
     ztimeout!(async {
         while router_handler.get_count() != MSG_COUNT {
-            task::sleep(SLEEP_COUNT).await;
+            sleep(SLEEP_COUNT).await;
         }
     });
 
     // Wait a little bit
-    task::sleep(SLEEP).await;
+    sleep(SLEEP).await;
 }
 
 async fn run(endpoints: &[EndPoint], channel: &[Channel], msg_size: &[usize]) {
@@ -313,7 +313,7 @@ async fn run(endpoints: &[EndPoint], channel: &[Channel], msg_size: &[usize]) {
 #[cfg(feature = "transport_tcp")]
 #[test]
 fn conduits_tcp_only() {
-    task::block_on(async {
+    block_on(async {
         zasync_executor_init!();
     });
     let mut channel = vec![];
@@ -326,5 +326,5 @@ fn conduits_tcp_only() {
     // Define the locators
     let endpoints: Vec<EndPoint> = vec!["tcp/127.0.0.1:13447".parse().unwrap()];
     // Run
-    task::block_on(run(&endpoints, &channel, &MSG_SIZE_ALL));
+    block_on(run(&endpoints, &channel, &MSG_SIZE_ALL));
 }

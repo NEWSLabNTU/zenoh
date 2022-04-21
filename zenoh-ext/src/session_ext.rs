@@ -62,7 +62,7 @@ pub trait SessionExt {
     ///
     /// # Examples
     /// ```no_run
-    /// # async_std::task::block_on(async {
+    /// # block_on(async {
     /// use futures::prelude::*;
     /// use zenoh::prelude::*;
     /// use zenoh_ext::*;

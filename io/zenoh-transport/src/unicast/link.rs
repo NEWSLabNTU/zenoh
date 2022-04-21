@@ -21,10 +21,9 @@ use super::TransportUnicastStatsAtomic;
 use crate::common::pipeline::TransmissionPipelineConf;
 use crate::TransportExecutor;
 use async_std::prelude::FutureExt;
-use async_std::task;
-use async_std::task::JoinHandle;
 use std::sync::Arc;
 use std::time::Duration;
+use zenoh_async_rt::{spawn, JoinHandle};
 use zenoh_buffers::buffer::InsertBuffer;
 use zenoh_buffers::reader::{HasReader, Reader};
 use zenoh_collections::RecyclingObjectPool;
@@ -104,7 +103,7 @@ impl TransportLinkUnicast {
                     log::debug!("{}", e);
                     // Spawn a task to avoid a deadlock waiting for this same task
                     // to finish in the close() joining its handle
-                    task::spawn(async move { c_transport.del_link(&c_link).await });
+                    spawn(async move { c_transport.del_link(&c_link).await });
                 }
             });
             self.handle_tx = Some(Arc::new(handle));
@@ -125,7 +124,7 @@ impl TransportLinkUnicast {
             let c_signal = self.signal_rx.clone();
             let c_rx_buffer_size = self.transport.config.manager.config.link_rx_buffer_size;
 
-            let handle = task::spawn(async move {
+            let handle = spawn(async move {
                 // Start the consume task
                 let res = rx_task(
                     c_link.clone(),
@@ -140,7 +139,7 @@ impl TransportLinkUnicast {
                     log::debug!("{}", e);
                     // Spawn a task to avoid a deadlock waiting for this same task
                     // to finish in the close() joining its handle
-                    task::spawn(async move { c_transport.del_link(&c_link).await });
+                    spawn(async move { c_transport.del_link(&c_link).await });
                 }
             });
             self.handle_rx = Some(Arc::new(handle));

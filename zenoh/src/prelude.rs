@@ -737,7 +737,7 @@ impl<'a> From<KeyExpr<'a>> for Selector<'a> {
 /// ```
 ///
 /// ```no_run
-/// # async_std::task::block_on(async {
+/// # block_on(async {
 /// # use futures::prelude::*;
 /// # use zenoh::prelude::*;
 /// # let session = zenoh::open(config::peer()).await.unwrap();
@@ -756,7 +756,7 @@ impl<'a> From<KeyExpr<'a>> for Selector<'a> {
 /// ```
 ///
 /// ```
-/// # async_std::task::block_on(async {
+/// # block_on(async {
 /// # use futures::prelude::*;
 /// # use zenoh::prelude::*;
 /// # let session = zenoh::open(config::peer()).await.unwrap();
@@ -890,13 +890,13 @@ impl<'a> TryFrom<&'a String> for ValueSelector<'a> {
 ///
 /// # Examples
 /// ```no_run
-/// # async_std::task::block_on(async {
+/// # block_on(async {
 /// use futures::prelude::*;
 /// use zenoh::prelude::*;
 ///
 /// let session = zenoh::open(config::peer()).await.unwrap().into_arc();
 /// let mut subscriber = session.subscribe("/key/expression").await.unwrap();
-/// async_std::task::spawn(async move {
+/// spawn(async move {
 ///     while let Some(sample) = subscriber.next().await {
 ///         println!("Received : {:?}", sample);
 ///     }
@@ -912,13 +912,13 @@ pub trait EntityFactory {
     ///
     /// # Examples
     /// ```no_run
-    /// # async_std::task::block_on(async {
+    /// # block_on(async {
     /// use futures::prelude::*;
     /// use zenoh::prelude::*;
     ///
     /// let session = zenoh::open(config::peer()).await.unwrap().into_arc();
     /// let mut subscriber = session.subscribe("/key/expression").await.unwrap();
-    /// async_std::task::spawn(async move {
+    /// spawn(async move {
     ///     while let Some(sample) = subscriber.next().await {
     ///         println!("Received : {:?}", sample);
     ///     }
@@ -938,13 +938,13 @@ pub trait EntityFactory {
     ///
     /// # Examples
     /// ```no_run
-    /// # async_std::task::block_on(async {
+    /// # block_on(async {
     /// use futures::prelude::*;
     /// use zenoh::prelude::*;
     ///
     /// let session = zenoh::open(config::peer()).await.unwrap().into_arc();
     /// let mut queryable = session.queryable("/key/expression").await.unwrap();
-    /// async_std::task::spawn(async move {
+    /// spawn(async move {
     ///     while let Some(query) = queryable.next().await {
     ///         query.reply_async(Sample::new(
     ///             "/key/expression".to_string(),
@@ -966,7 +966,7 @@ pub trait EntityFactory {
     ///
     /// # Examples
     /// ```
-    /// # async_std::task::block_on(async {
+    /// # block_on(async {
     /// use zenoh::prelude::*;
     ///
     /// let session = zenoh::open(config::peer()).await.unwrap().into_arc();

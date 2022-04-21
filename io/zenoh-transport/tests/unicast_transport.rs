@@ -12,11 +12,11 @@
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
 use async_std::prelude::FutureExt;
-use async_std::task;
 use std::any::Any;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
+use zenoh_async_rt::{block_on, sleep};
 use zenoh_core::zasync_executor_init;
 use zenoh_core::Result as ZResult;
 use zenoh_link::{EndPoint, Link};
@@ -218,7 +218,7 @@ async fn close_transport(
 
     ztimeout!(async {
         while !router_manager.get_transports().is_empty() {
-            task::sleep(SLEEP).await;
+            sleep(SLEEP).await;
         }
     });
 
@@ -230,18 +230,18 @@ async fn close_transport(
 
     ztimeout!(async {
         while !router_manager.get_listeners().is_empty() {
-            task::sleep(SLEEP).await;
+            sleep(SLEEP).await;
         }
     });
 
     // Wait a little bit
-    task::sleep(SLEEP).await;
+    sleep(SLEEP).await;
 
     ztimeout!(router_manager.close());
     ztimeout!(client_manager.close());
 
     // Wait a little bit
-    task::sleep(SLEEP).await;
+    sleep(SLEEP).await;
 }
 
 async fn test_transport(
@@ -280,21 +280,21 @@ async fn test_transport(
         Reliability::Reliable => {
             ztimeout!(async {
                 while router_handler.get_count() != MSG_COUNT {
-                    task::sleep(SLEEP_COUNT).await;
+                    sleep(SLEEP_COUNT).await;
                 }
             });
         }
         Reliability::BestEffort => {
             ztimeout!(async {
                 while router_handler.get_count() == 0 {
-                    task::sleep(SLEEP_COUNT).await;
+                    sleep(SLEEP_COUNT).await;
                 }
             });
         }
     };
 
     // Wait a little bit
-    task::sleep(SLEEP).await;
+    sleep(SLEEP).await;
 }
 
 async fn run_single(endpoints: &[EndPoint], channel: Channel, msg_size: usize) {
@@ -336,7 +336,7 @@ async fn run(endpoints: &[EndPoint], channel: &[Channel], msg_size: &[usize]) {
 #[cfg(feature = "transport_tcp")]
 #[test]
 fn transport_unicast_tcp_only() {
-    task::block_on(async {
+    block_on(async {
         zasync_executor_init!();
     });
 
@@ -365,13 +365,13 @@ fn transport_unicast_tcp_only() {
         },
     ];
     // Run
-    task::block_on(run(&endpoints, &channel, &MSG_SIZE_ALL));
+    block_on(run(&endpoints, &channel, &MSG_SIZE_ALL));
 }
 
 #[cfg(feature = "transport_udp")]
 #[test]
 fn transport_unicast_udp_only() {
-    task::block_on(async {
+    block_on(async {
         zasync_executor_init!();
     });
 
@@ -392,13 +392,13 @@ fn transport_unicast_udp_only() {
         },
     ];
     // Run
-    task::block_on(run(&endpoints, &channel, &MSG_SIZE_NOFRAG));
+    block_on(run(&endpoints, &channel, &MSG_SIZE_NOFRAG));
 }
 
 #[cfg(all(feature = "transport_unixsock-stream", target_family = "unix"))]
 #[test]
 fn transport_unicast_unix_only() {
-    task::block_on(async {
+    block_on(async {
         zasync_executor_init!();
     });
 
@@ -419,7 +419,7 @@ fn transport_unicast_unix_only() {
         },
     ];
     // Run
-    task::block_on(run(&endpoints, &channel, &MSG_SIZE_ALL));
+    block_on(run(&endpoints, &channel, &MSG_SIZE_ALL));
     let _ = std::fs::remove_file("zenoh-test-unix-socket-5.sock");
     let _ = std::fs::remove_file("zenoh-test-unix-socket-5.sock.lock");
 }
@@ -427,7 +427,7 @@ fn transport_unicast_unix_only() {
 #[cfg(all(feature = "transport_tcp", feature = "transport_udp"))]
 #[test]
 fn transport_unicast_tcp_udp() {
-    task::block_on(async {
+    block_on(async {
         zasync_executor_init!();
     });
 
@@ -450,7 +450,7 @@ fn transport_unicast_tcp_udp() {
         },
     ];
     // Run
-    task::block_on(run(&endpoints, &channel, &MSG_SIZE_NOFRAG));
+    block_on(run(&endpoints, &channel, &MSG_SIZE_NOFRAG));
 }
 
 #[cfg(all(
@@ -460,7 +460,7 @@ fn transport_unicast_tcp_udp() {
 ))]
 #[test]
 fn transport_unicast_tcp_unix() {
-    task::block_on(async {
+    block_on(async {
         zasync_executor_init!();
     });
 
@@ -485,7 +485,7 @@ fn transport_unicast_tcp_unix() {
         },
     ];
     // Run
-    task::block_on(run(&endpoints, &channel, &MSG_SIZE_ALL));
+    block_on(run(&endpoints, &channel, &MSG_SIZE_ALL));
     let _ = std::fs::remove_file("zenoh-test-unix-socket-6.sock");
     let _ = std::fs::remove_file("zenoh-test-unix-socket-6.sock.lock");
 }
@@ -497,7 +497,7 @@ fn transport_unicast_tcp_unix() {
 ))]
 #[test]
 fn transport_unicast_udp_unix() {
-    task::block_on(async {
+    block_on(async {
         zasync_executor_init!();
     });
 
@@ -522,7 +522,7 @@ fn transport_unicast_udp_unix() {
         },
     ];
     // Run
-    task::block_on(run(&endpoints, &channel, &MSG_SIZE_NOFRAG));
+    block_on(run(&endpoints, &channel, &MSG_SIZE_NOFRAG));
     let _ = std::fs::remove_file("zenoh-test-unix-socket-7.sock");
     let _ = std::fs::remove_file("zenoh-test-unix-socket-7.sock.lock");
 }
@@ -535,7 +535,7 @@ fn transport_unicast_udp_unix() {
 ))]
 #[test]
 fn transport_unicast_tcp_udp_unix() {
-    task::block_on(async {
+    block_on(async {
         zasync_executor_init!();
     });
 
@@ -562,7 +562,7 @@ fn transport_unicast_tcp_udp_unix() {
         },
     ];
     // Run
-    task::block_on(run(&endpoints, &channel, &MSG_SIZE_NOFRAG));
+    block_on(run(&endpoints, &channel, &MSG_SIZE_NOFRAG));
     let _ = std::fs::remove_file("zenoh-test-unix-socket-8.sock");
     let _ = std::fs::remove_file("zenoh-test-unix-socket-8.sock.lock");
 }
@@ -572,7 +572,7 @@ fn transport_unicast_tcp_udp_unix() {
 fn transport_unicast_tls_only() {
     use zenoh_link::tls::config::*;
 
-    task::block_on(async {
+    block_on(async {
         zasync_executor_init!();
     });
 
@@ -682,7 +682,7 @@ tOzot3pwe+3SJtpk90xAQrABEO0Zh2unrC8i83ySfg==
     ];
     // Run
     let endpoints = vec![endpoint];
-    task::block_on(run(&endpoints, &channel, &MSG_SIZE_ALL));
+    block_on(run(&endpoints, &channel, &MSG_SIZE_ALL));
 }
 
 #[cfg(feature = "transport_quic")]
@@ -690,7 +690,7 @@ tOzot3pwe+3SJtpk90xAQrABEO0Zh2unrC8i83ySfg==
 fn transport_unicast_quic_only() {
     use zenoh_link::quic::config::*;
 
-    task::block_on(async {
+    block_on(async {
         zasync_executor_init!();
     });
     // NOTE: this an auto-generated pair of certificate and key.
@@ -800,5 +800,5 @@ tOzot3pwe+3SJtpk90xAQrABEO0Zh2unrC8i83ySfg==
     ];
     // Run
     let endpoints = vec![endpoint];
-    task::block_on(run(&endpoints, &channel, &MSG_SIZE_ALL));
+    block_on(run(&endpoints, &channel, &MSG_SIZE_ALL));
 }

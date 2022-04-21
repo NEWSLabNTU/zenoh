@@ -17,6 +17,7 @@ use crate::TransportManager;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use zenoh_async_rt::block_on;
 use zenoh_config::Config;
 use zenoh_core::{bail, Result as ZResult};
 use zenoh_core::{zerror, zlock};
@@ -126,7 +127,7 @@ impl Default for TransportManagerBuilderMulticast {
             max_sessions: 0,
             is_qos: false,
         };
-        async_std::task::block_on(tmb.from_config(&Config::default())).unwrap()
+        block_on(tmb.from_config(&Config::default())).unwrap()
     }
 }
 

@@ -12,10 +12,10 @@
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
 use async_std::prelude::FutureExt;
-use async_std::task;
 use std::any::Any;
 use std::sync::Arc;
 use std::time::Duration;
+use zenoh_async_rt::{block_on, sleep};
 use zenoh_core::zasync_executor_init;
 use zenoh_core::Result as ZResult;
 use zenoh_link::{EndPoint, Link};
@@ -94,7 +94,7 @@ async fn run(endpoints: &[EndPoint]) {
             assert!(res.is_ok());
         }
 
-        task::sleep(SLEEP).await;
+        sleep(SLEEP).await;
 
         // Delete the listeners
         for e in endpoints.iter() {
@@ -104,7 +104,7 @@ async fn run(endpoints: &[EndPoint]) {
             assert!(res.is_ok());
         }
 
-        task::sleep(SLEEP).await;
+        sleep(SLEEP).await;
     }
 }
 
@@ -196,7 +196,7 @@ fn endpoint_parsing() {
 #[cfg(feature = "transport_tcp")]
 #[test]
 fn endpoint_tcp() {
-    task::block_on(async {
+    block_on(async {
         zasync_executor_init!();
     });
 
@@ -206,13 +206,13 @@ fn endpoint_tcp() {
         "tcp/[::1]:9447".parse().unwrap(),
         "tcp/localhost:9448".parse().unwrap(),
     ];
-    task::block_on(run(&endpoints));
+    block_on(run(&endpoints));
 }
 
 #[cfg(feature = "transport_udp")]
 #[test]
 fn endpoint_udp() {
-    task::block_on(async {
+    block_on(async {
         zasync_executor_init!();
     });
 
@@ -222,13 +222,13 @@ fn endpoint_udp() {
         "udp/[::1]:9447".parse().unwrap(),
         "udp/localhost:9448".parse().unwrap(),
     ];
-    task::block_on(run(&endpoints));
+    block_on(run(&endpoints));
 }
 
 #[cfg(all(feature = "transport_unixsock-stream", target_family = "unix"))]
 #[test]
 fn endpoint_unix() {
-    task::block_on(async {
+    block_on(async {
         zasync_executor_init!();
     });
 
@@ -244,7 +244,7 @@ fn endpoint_unix() {
             .parse()
             .unwrap(),
     ];
-    task::block_on(run(&endpoints));
+    block_on(run(&endpoints));
     let _ = std::fs::remove_file("zenoh-test-unix-socket-0.sock");
     let _ = std::fs::remove_file("zenoh-test-unix-socket-1.sock");
     let _ = std::fs::remove_file("zenoh-test-unix-socket-0.sock.lock");
@@ -254,7 +254,7 @@ fn endpoint_unix() {
 #[cfg(all(feature = "transport_tcp", feature = "transport_udp"))]
 #[test]
 fn endpoint_tcp_udp() {
-    task::block_on(async {
+    block_on(async {
         zasync_executor_init!();
     });
 
@@ -265,7 +265,7 @@ fn endpoint_tcp_udp() {
         "tcp/[::1]:9449".parse().unwrap(),
         "udp/[::1]:9449".parse().unwrap(),
     ];
-    task::block_on(run(&endpoints));
+    block_on(run(&endpoints));
 }
 
 #[cfg(all(
@@ -276,7 +276,7 @@ fn endpoint_tcp_udp() {
 ))]
 #[test]
 fn endpoint_tcp_udp_unix() {
-    task::block_on(async {
+    block_on(async {
         zasync_executor_init!();
     });
 
@@ -292,7 +292,7 @@ fn endpoint_tcp_udp_unix() {
             .parse()
             .unwrap(),
     ];
-    task::block_on(run(&endpoints));
+    block_on(run(&endpoints));
     let _ = std::fs::remove_file("zenoh-test-unix-socket-2.sock");
     let _ = std::fs::remove_file("zenoh-test-unix-socket-2.sock.lock");
 }
@@ -304,7 +304,7 @@ fn endpoint_tcp_udp_unix() {
 ))]
 #[test]
 fn endpoint_tcp_unix() {
-    task::block_on(async {
+    block_on(async {
         zasync_executor_init!();
     });
 
@@ -318,7 +318,7 @@ fn endpoint_tcp_unix() {
             .parse()
             .unwrap(),
     ];
-    task::block_on(run(&endpoints));
+    block_on(run(&endpoints));
     let _ = std::fs::remove_file("zenoh-test-unix-socket-3.sock");
     let _ = std::fs::remove_file("zenoh-test-unix-socket-3.sock.lock");
 }
@@ -330,7 +330,7 @@ fn endpoint_tcp_unix() {
 ))]
 #[test]
 fn endpoint_udp_unix() {
-    task::block_on(async {
+    block_on(async {
         zasync_executor_init!();
     });
 
@@ -344,7 +344,7 @@ fn endpoint_udp_unix() {
             .parse()
             .unwrap(),
     ];
-    task::block_on(run(&endpoints));
+    block_on(run(&endpoints));
     let _ = std::fs::remove_file("zenoh-test-unix-socket-4.sock");
     let _ = std::fs::remove_file("zenoh-test-unix-socket-4.sock.lock");
 }
@@ -354,7 +354,7 @@ fn endpoint_udp_unix() {
 fn endpoint_tls() {
     use zenoh_link::tls::config::*;
 
-    task::block_on(async {
+    block_on(async {
         zasync_executor_init!();
     });
 
@@ -424,7 +424,7 @@ AXVFFIgCSluyrolaD6CWD9MqOex4YOfJR2bNxI7lFvuK4AwjyUJzT1U1HXib17mM
     );
 
     let endpoints = vec![endpoint];
-    task::block_on(run(&endpoints));
+    block_on(run(&endpoints));
 }
 
 #[cfg(feature = "transport_quic")]
@@ -432,7 +432,7 @@ AXVFFIgCSluyrolaD6CWD9MqOex4YOfJR2bNxI7lFvuK4AwjyUJzT1U1HXib17mM
 fn endpoint_quic() {
     use zenoh_link::quic::config::*;
 
-    task::block_on(async {
+    block_on(async {
         zasync_executor_init!();
     });
 
@@ -501,5 +501,5 @@ AXVFFIgCSluyrolaD6CWD9MqOex4YOfJR2bNxI7lFvuK4AwjyUJzT1U1HXib17mM
         .map(|(k, v)| ((*k).to_owned(), (*v).to_owned())),
     );
     let endpoints = vec![endpoint];
-    task::block_on(run(&endpoints));
+    block_on(run(&endpoints));
 }

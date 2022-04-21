@@ -26,6 +26,7 @@ use zenoh::plugins::{Plugin, RunningPluginTrait, ValidationFunction, ZenohPlugin
 use zenoh::prelude::*;
 use zenoh::queryable::STORAGE;
 use zenoh::utils::key_expr;
+use zenoh_async_rt::spawn;
 use zenoh_core::{bail, zlock, Result as ZResult};
 
 pub struct ExamplePlugin {}
@@ -54,7 +55,7 @@ impl Plugin for ExamplePlugin {
         }
         std::mem::drop(config);
         let flag = Arc::new(AtomicBool::new(true));
-        async_std::task::spawn(run(runtime.clone(), selector.into(), flag.clone()));
+        spawn(run(runtime.clone(), selector.into(), flag.clone()));
         Ok(Box::new(RunningPlugin(Arc::new(Mutex::new(
             RunningPluginInner {
                 flag,
@@ -87,7 +88,7 @@ impl RunningPluginTrait for RunningPlugin {
                         let mut guard = zlock!(&plugin.0);
                         guard.flag.store(false, Relaxed);
                         guard.flag = Arc::new(AtomicBool::new(true));
-                        async_std::task::spawn(run(
+                        spawn(run(
                             guard.runtime.clone(),
                             selector.clone().into(),
                             guard.flag.clone(),

@@ -11,10 +11,10 @@
 // Contributors:
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
-use async_std::task::sleep;
 use clap::{App, Arg};
 use std::time::Duration;
 use zenoh::config::Config;
+use zenoh_async_rt::sleep;
 
 #[async_std::main]
 async fn main() {

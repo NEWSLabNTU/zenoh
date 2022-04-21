@@ -15,6 +15,7 @@ use async_std::prelude::FutureExt;
 use futures::stream::StreamExt;
 use zenoh::config::Config;
 use zenoh::scouting::WhatAmI;
+use zenoh_async_rt::sleep;
 
 #[async_std::main]
 async fn main() {
@@ -31,7 +32,7 @@ async fn main() {
             println!("{}", hello);
         }
     };
-    let timeout = async_std::task::sleep(std::time::Duration::from_secs(1));
+    let timeout = sleep(std::time::Duration::from_secs(1));
 
     scout.race(timeout).await;
 

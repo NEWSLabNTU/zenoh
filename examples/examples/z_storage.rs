@@ -13,7 +13,6 @@
 //
 #![recursion_limit = "256"]
 
-use async_std::task::sleep;
 use clap::{App, Arg};
 use futures::prelude::*;
 use futures::select;
@@ -23,6 +22,7 @@ use zenoh::config::Config;
 use zenoh::prelude::*;
 use zenoh::queryable::STORAGE;
 use zenoh::utils::key_expr;
+use zenoh_async_rt::sleep;
 
 #[async_std::main]
 async fn main() {
