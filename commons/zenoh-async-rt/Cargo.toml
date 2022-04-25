@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 async-std = { version = "=1.11.0", features = ["unstable"] }
 futures = "0.3.21"
+pin-project = "1.0.10"
