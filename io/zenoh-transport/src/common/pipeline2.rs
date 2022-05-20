@@ -52,8 +52,8 @@ impl TransmissionPipeline {
         self.inner().push_transport_message(message, priority)
     }
 
-    pub(crate) fn push_zenoh_message(&self, message: ZenohMessage) -> bool {
-        self.inner().push_zenoh_message(message)
+    pub(crate) async fn push_zenoh_message(&self, message: ZenohMessage) -> bool {
+        self.inner().push_zenoh_message(message).await
     }
 
     pub(crate) async fn pull(&self) -> (SerializationBatchGuard, usize) {
@@ -136,12 +136,11 @@ mod inner {
                 .push_transport_message(message)
         }
 
-        pub(super) fn push_zenoh_message(&self, mut message: ZenohMessage) -> bool {
+        pub(super) async fn push_zenoh_message(&self, mut message: ZenohMessage) -> bool {
             // get priority and queue for this message
             let queue = if self.is_qos() {
                 message.channel.priority as usize
             } else {
-                let priority = Priority::default();
                 message.channel.priority = Priority::default();
                 0
             };
@@ -149,6 +148,7 @@ mod inner {
             self.conduits[queue]
                 .lock_stage_in()
                 .push_zenoh_message(message)
+                .await
         }
 
         pub(super) async fn pull(&self) -> (SerializationBatchGuard, usize) {
@@ -263,7 +263,7 @@ mod conduit_guard {
             }
         }
 
-        fn shift_stage_in(&mut self, fallible: bool) -> Option<&mut SerializationBatch> {
+        async fn shift_stage_in(&mut self) -> &mut SerializationBatch {
             let Self {
                 stage_refill,
                 stage_in,
@@ -272,11 +272,10 @@ mod conduit_guard {
             } = self;
 
             if !stage_in.is_written {
-                debug_assert!(stage_in.batch.is_some());
-                return stage_in.batch.as_mut();
+                return stage_in.batch.as_mut().unwrap();
             }
 
-            let mut new = stage_refill.pop(fallible)?;
+            let mut new = stage_refill.pop().await;
             new.clear();
 
             let orig = mem::replace(&mut stage_in.batch, Some(new));
@@ -286,10 +285,37 @@ mod conduit_guard {
                 stage_out.try_push(orig).unwrap();
             }
 
-            stage_in.batch.as_mut()
+            stage_in.batch.as_mut().unwrap()
         }
 
-        fn fill_and_get_stage_in(&mut self, fallible: bool) -> Option<&mut SerializationBatch> {
+        fn try_shift_stage_in(&mut self) -> Option<&mut SerializationBatch> {
+            let Self {
+                stage_refill,
+                stage_in,
+                stage_out,
+                ..
+            } = self;
+
+            if !stage_in.is_written {
+                let batch = stage_in.batch.as_mut().unwrap();
+                return Some(batch);
+            }
+
+            let mut new = stage_refill.try_pop()?;
+            new.clear();
+
+            let orig = mem::replace(&mut stage_in.batch, Some(new));
+            stage_in.is_written = false;
+
+            if let Some(orig) = orig {
+                stage_out.try_push(orig).unwrap();
+            }
+
+            let batch = stage_in.batch.as_mut().unwrap();
+            Some(batch)
+        }
+
+        async fn fill_and_get_stage_in(&mut self) -> &mut SerializationBatch {
             let Self {
                 stage_refill,
                 stage_in,
@@ -297,23 +323,59 @@ mod conduit_guard {
             } = self;
 
             if stage_in.batch.is_none() {
-                let new_batch = match stage_refill.pop(fallible) {
-                    Some(batch) => batch,
-                    None => return None,
-                };
+                let new_batch = stage_refill.pop().await;
 
                 stage_in.batch = Some(new_batch);
                 stage_in.is_written = false;
             }
 
-            stage_in.batch.as_mut()
+            stage_in.batch.as_mut().unwrap()
         }
 
-        fn try_write_batch<F>(&mut self, mut f: F, fallible: bool) -> bool
+        fn try_fill_and_get_stage_in(&mut self) -> Option<&mut SerializationBatch> {
+            let Self {
+                stage_refill,
+                stage_in,
+                ..
+            } = self;
+
+            if stage_in.batch.is_none() {
+                let new_batch = stage_refill.try_pop()?;
+                stage_in.batch = Some(new_batch);
+                stage_in.is_written = false;
+            }
+
+            let batch = stage_in.batch.as_mut().unwrap();
+            Some(batch)
+        }
+
+        async fn write_batch<F>(&mut self, mut f: F)
         where
             F: FnMut(&mut SerializationBatch) -> bool,
         {
-            let batch = match self.fill_and_get_stage_in(fallible) {
+            let batch = self.fill_and_get_stage_in().await;
+
+            // first try
+            let ok = (f)(batch);
+            if ok {
+                self.stage_in.is_written = true;
+                return;
+            }
+
+            // if failed, rotate the batch
+            let batch = self.shift_stage_in().await;
+
+            // second try, must suceed
+            let ok = (f)(batch);
+            debug_assert!(ok);
+            self.stage_in.is_written = true;
+        }
+
+        fn try_write_batch<F>(&mut self, mut f: F) -> bool
+        where
+            F: FnMut(&mut SerializationBatch) -> bool,
+        {
+            let batch = match self.try_fill_and_get_stage_in() {
                 Some(batch) => batch,
                 None => return false,
             };
@@ -326,7 +388,7 @@ mod conduit_guard {
             }
 
             // if failed, rotate the batch
-            let batch = match self.shift_stage_in(fallible) {
+            let batch = match self.try_shift_stage_in() {
                 Some(batch) => batch,
                 None => return false,
             };
@@ -339,14 +401,12 @@ mod conduit_guard {
             true
         }
 
-        fn fragment_zenoh_message(
+        async fn fragment_zenoh_message(
             &mut self,
             mut message: ZenohMessage,
             channel: &mut TransportChannelTx,
         ) -> bool {
-            if self.fill_and_get_stage_in(false).is_none() {
-                return false;
-            };
+            self.fill_and_get_stage_in().await;
 
             let Self {
                 stage_refill,
@@ -398,7 +458,7 @@ mod conduit_guard {
                     }
 
                     // Move the serialization batch into the OUT pipeline
-                    let new = stage_refill.pop(false).unwrap();
+                    let new = stage_refill.pop().await;
                     let orig = mem::replace(curr_batch, new);
                     *is_written = false;
                     out_batches.push(orig);
@@ -428,14 +488,11 @@ mod conduit_guard {
         }
 
         pub(super) fn push_transport_message(&mut self, mut message: TransportMessage) {
-            let ok = self.try_write_batch(
-                |batch| batch.serialize_transport_message(&mut message),
-                false,
-            );
+            let ok = self.try_write_batch(|batch| batch.serialize_transport_message(&mut message));
             debug_assert!(ok);
         }
 
-        pub(super) fn push_zenoh_message(&mut self, mut message: ZenohMessage) -> bool {
+        pub(super) async fn push_zenoh_message(&mut self, mut message: ZenohMessage) -> bool {
             // get conduit of specified priority
             let mut channel = if message.is_reliable() {
                 zlock!(self.conduit.reliable)
@@ -447,15 +504,23 @@ mod conduit_guard {
             let fallible = message.is_droppable();
             let priority = message.channel.priority;
 
-            let ok = self.try_write_batch(
-                |batch| batch.serialize_zenoh_message(&mut message, priority, &mut channel.sn),
-                fallible,
-            );
+            let ok = if fallible {
+                self.try_write_batch(|batch| {
+                    batch.serialize_zenoh_message(&mut message, priority, &mut channel.sn)
+                })
+            } else {
+                self.write_batch(|batch| {
+                    batch.serialize_zenoh_message(&mut message, priority, &mut channel.sn)
+                })
+                .await;
+
+                true
+            };
 
             if ok {
                 true
             } else if !fallible {
-                self.fragment_zenoh_message(message, &mut channel)
+                self.fragment_zenoh_message(message, &mut channel).await
             } else {
                 false
             }
@@ -534,6 +599,8 @@ mod stage_out {
 use stage_refill::*;
 mod stage_refill {
 
+    use backoff::backoff::Backoff;
+
     use super::*;
 
     pub(super) struct StageRefill {
@@ -564,22 +631,21 @@ mod stage_refill {
             Ok(())
         }
 
-        pub(super) fn pop(&self, fallible: bool) -> Option<SerializationBatch> {
-            use backoff::Error as E;
+        pub(super) async fn pop(&self) -> SerializationBatch {
+            let mut backoff = self.backoff.clone();
 
-            backoff::retry(self.backoff.clone(), || {
+            loop {
                 if let Some(batch) = self.queue.pop() {
-                    Ok(batch)
-                } else if fallible {
-                    Err(E::Permanent(()))
-                } else {
-                    Err(E::Transient {
-                        err: (),
-                        retry_after: None,
-                    })
+                    break batch;
                 }
-            })
-            .ok()
+
+                let dur = backoff.next_backoff().unwrap();
+                async_std::task::sleep(dur).await;
+            }
+        }
+
+        pub(super) fn try_pop(&self) -> Option<SerializationBatch> {
+            self.queue.pop()
         }
     }
 }
