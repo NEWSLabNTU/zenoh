@@ -612,40 +612,47 @@ pub(crate) fn pubsub_new_face(tables: &mut Tables, face: &mut Arc<FaceState>) {
 pub(crate) fn pubsub_remove_node(tables: &mut Tables, node: &PeerId, net_type: WhatAmI) {
     match net_type {
         WhatAmI::Router => {
-            for mut res in tables
+            tables
                 .router_subs
                 .iter()
                 .filter(|res| res.context().router_subs.contains(node))
                 .cloned()
                 .collect::<Vec<Arc<Resource>>>()
-            {
-                unregister_router_subscription(tables, &mut res, node);
+                .into_iter()
+                .for_each(|mut res| {
+                    unregister_router_subscription(tables, &mut res, node);
 
-                compute_matches_data_routes(tables, &mut res);
-                Resource::clean(&mut res)
-            }
+                    compute_matches_data_routes(tables, &mut res);
+                    Resource::clean(&mut res)
+                });
         }
         WhatAmI::Peer => {
-            for mut res in tables
+            tables
                 .peer_subs
                 .iter()
                 .filter(|res| res.context().peer_subs.contains(node))
                 .cloned()
                 .collect::<Vec<Arc<Resource>>>()
-            {
-                unregister_peer_subscription(tables, &mut res, node);
+                .into_iter()
+                .for_each(|mut res| {
+                    unregister_peer_subscription(tables, &mut res, node);
 
-                if tables.whatami == WhatAmI::Router {
-                    let client_subs = res.session_ctxs.values().any(|ctx| ctx.subs.is_some());
-                    let peer_subs = remote_peer_subs(tables, &res);
-                    if !client_subs && !peer_subs {
-                        undeclare_router_subscription(tables, None, &mut res, &tables.pid.clone());
+                    if tables.whatami == WhatAmI::Router {
+                        let client_subs = res.session_ctxs.values().any(|ctx| ctx.subs.is_some());
+                        let peer_subs = remote_peer_subs(tables, &res);
+                        if !client_subs && !peer_subs {
+                            undeclare_router_subscription(
+                                tables,
+                                None,
+                                &mut res,
+                                &tables.pid.clone(),
+                            );
+                        }
                     }
-                }
 
-                compute_matches_data_routes(tables, &mut res);
-                Resource::clean(&mut res)
-            }
+                    compute_matches_data_routes(tables, &mut res);
+                    Resource::clean(&mut res)
+                });
         }
         _ => (),
     }
