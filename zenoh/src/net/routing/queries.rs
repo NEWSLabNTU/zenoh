@@ -31,6 +31,7 @@ use zenoh_protocol_core::{
 };
 
 use super::face::FaceState;
+use super::id::{RID, FID};
 use super::network::Network;
 use super::resource::{
     elect_router, QueryRoute, Resource, SessionContext, TargetQabl, TargetQablSet,
@@ -38,7 +39,7 @@ use super::resource::{
 use super::router::Tables;
 
 pub(crate) struct Query {
-    src_face: Arc<FaceState>,
+    src_face: FID,
     src_qid: ZInt,
 }
 
@@ -62,7 +63,7 @@ fn merge_qabl_infos(mut this: QueryableInfo, info: &QueryableInfo) -> QueryableI
     this
 }
 
-fn local_router_qabl_info(tables: &Tables, res: &Arc<Resource>, kind: ZInt) -> QueryableInfo {
+fn local_router_qabl_info(tables: &Tables, res: RID, kind: ZInt) -> QueryableInfo {
     let info = res.context.as_ref().and_then(|ctx| {
         ctx.peer_qabls.iter().fold(None, |accu, ((pid, k), info)| {
             if *pid != tables.pid && *k == kind {
@@ -93,7 +94,7 @@ fn local_router_qabl_info(tables: &Tables, res: &Arc<Resource>, kind: ZInt) -> Q
         })
 }
 
-fn local_peer_qabl_info(tables: &Tables, res: &Arc<Resource>, kind: ZInt) -> QueryableInfo {
+fn local_peer_qabl_info(tables: &Tables, res: RID, kind: ZInt) -> QueryableInfo {
     let info = if tables.whatami == Router && res.context.is_some() {
         res.context()
             .router_qabls
@@ -132,9 +133,9 @@ fn local_peer_qabl_info(tables: &Tables, res: &Arc<Resource>, kind: ZInt) -> Que
 fn local_qabl_info(
     whatami: WhatAmI,
     local_pid: &PeerId,
-    res: &Arc<Resource>,
+    res: RID,
     kind: ZInt,
-    face: &Arc<FaceState>,
+    face: FID,
 ) -> QueryableInfo {
     let mut info = if whatami == Router && res.context.is_some() {
         res.context()
@@ -193,14 +194,14 @@ fn local_qabl_info(
 
 #[allow(clippy::too_many_arguments)]
 #[inline]
-fn send_sourced_queryable_to_net_childs<Face: std::borrow::Borrow<Arc<FaceState>>>(
+fn send_sourced_queryable_to_net_childs(
     tables: &Tables,
     net: &Network,
     childs: &[NodeIndex],
-    res: &Arc<Resource>,
+    res: RID,
     kind: ZInt,
     qabl_info: &QueryableInfo,
-    src_face: Option<Face>,
+    src_face: Option<FID>,
     routing_context: Option<RoutingContext>,
 ) {
     for child in childs {
@@ -233,9 +234,9 @@ fn send_sourced_queryable_to_net_childs<Face: std::borrow::Borrow<Arc<FaceState>
 
 fn propagate_simple_queryable(
     tables: &mut Tables,
-    res: &Arc<Resource>,
+    res: RID,
     kind: ZInt,
-    src_face: Option<&mut Arc<FaceState>>,
+    src_face: Option<FID>,
 ) {
     let whatami = tables.whatami;
     let pid = tables.pid;
@@ -261,12 +262,12 @@ fn propagate_simple_queryable(
     }
 }
 
-fn propagate_sourced_queryable<Face: std::borrow::Borrow<Arc<FaceState>>>(
+fn propagate_sourced_queryable(
     tables: &Tables,
-    res: &Arc<Resource>,
+    res: RID,
     kind: ZInt,
     qabl_info: &QueryableInfo,
-    src_face: Option<Face>,
+    src_face: Option<FID>,
     source: &PeerId,
     net_type: WhatAmI,
 ) {
@@ -303,8 +304,8 @@ fn propagate_sourced_queryable<Face: std::borrow::Borrow<Arc<FaceState>>>(
 
 fn register_router_queryable(
     tables: &mut Tables,
-    face: Option<&mut Arc<FaceState>>,
-    res: &mut Arc<Resource>,
+    face: Option<FID>,
+    res: RID,
     kind: ZInt,
     qabl_info: &QueryableInfo,
     router: PeerId,
@@ -349,7 +350,7 @@ fn register_router_queryable(
 
 pub fn declare_router_queryable(
     tables: &mut Tables,
-    face: &mut Arc<FaceState>,
+    face: FID,
     expr: &KeyExpr,
     kind: ZInt,
     qabl_info: &QueryableInfo,
@@ -367,10 +368,10 @@ pub fn declare_router_queryable(
     }
 }
 
-fn register_peer_queryable<Face: std::borrow::Borrow<Arc<FaceState>>>(
+fn register_peer_queryable(
     tables: &mut Tables,
-    face: Option<Face>,
-    res: &mut Arc<Resource>,
+    face: Option<FID>,
+    res: RID,
     kind: ZInt,
     qabl_info: &QueryableInfo,
     peer: PeerId,
@@ -399,7 +400,7 @@ fn register_peer_queryable<Face: std::borrow::Borrow<Arc<FaceState>>>(
 
 pub fn declare_peer_queryable(
     tables: &mut Tables,
-    face: &mut Arc<FaceState>,
+    face: FID,
     expr: &KeyExpr,
     kind: ZInt,
     qabl_info: &QueryableInfo,
@@ -425,8 +426,8 @@ pub fn declare_peer_queryable(
 
 fn register_client_queryable(
     _tables: &mut Tables,
-    face: &mut Arc<FaceState>,
-    res: &mut Arc<Resource>,
+    face: FID,
+    res: RID,
     kind: ZInt,
     qabl_info: &QueryableInfo,
 ) {
@@ -459,7 +460,7 @@ fn register_client_queryable(
 
 pub fn declare_client_queryable(
     tables: &mut Tables,
-    face: &mut Arc<FaceState>,
+    face: FID,
     expr: &KeyExpr,
     kind: ZInt,
     qabl_info: &QueryableInfo,
@@ -506,7 +507,7 @@ pub fn declare_client_queryable(
 }
 
 #[inline]
-fn remote_router_qabls(tables: &Tables, res: &Arc<Resource>, kind: ZInt) -> bool {
+fn remote_router_qabls(tables: &Tables, res: RID, kind: ZInt) -> bool {
     res.context.is_some()
         && res
             .context()
@@ -516,7 +517,7 @@ fn remote_router_qabls(tables: &Tables, res: &Arc<Resource>, kind: ZInt) -> bool
 }
 
 #[inline]
-fn remote_peer_qabls(tables: &Tables, res: &Arc<Resource>, kind: ZInt) -> bool {
+fn remote_peer_qabls(tables: &Tables, res: RID, kind: ZInt) -> bool {
     res.context.is_some()
         && res
             .context()
@@ -526,7 +527,7 @@ fn remote_peer_qabls(tables: &Tables, res: &Arc<Resource>, kind: ZInt) -> bool {
 }
 
 #[inline]
-fn client_qabls(res: &Arc<Resource>, kind: ZInt) -> Vec<Arc<FaceState>> {
+fn client_qabls(res: RID, kind: ZInt) -> Vec<Arc<FaceState>> {
     res.session_ctxs
         .values()
         .filter_map(|ctx| {
@@ -544,9 +545,9 @@ fn send_forget_sourced_queryable_to_net_childs(
     tables: &Tables,
     net: &Network,
     childs: &[NodeIndex],
-    res: &Arc<Resource>,
+    res: RID,
     kind: ZInt,
-    src_face: Option<&Arc<FaceState>>,
+    src_face: Option<FID>,
     routing_context: Option<RoutingContext>,
 ) {
     for child in childs {
@@ -574,7 +575,7 @@ fn send_forget_sourced_queryable_to_net_childs(
     }
 }
 
-fn propagate_forget_simple_queryable(tables: &mut Tables, res: &mut Arc<Resource>, kind: ZInt) {
+fn propagate_forget_simple_queryable(tables: &mut Tables, res: RID, kind: ZInt) {
     for face in tables.faces.values_mut() {
         if face.local_qabls.contains_key(&(res.clone(), kind)) {
             let key_expr = Resource::get_best_key(res, "", face.id);
@@ -589,9 +590,9 @@ fn propagate_forget_simple_queryable(tables: &mut Tables, res: &mut Arc<Resource
 
 fn propagate_forget_sourced_queryable(
     tables: &mut Tables,
-    res: &mut Arc<Resource>,
+    res: RID,
     kind: ZInt,
-    src_face: Option<&Arc<FaceState>>,
+    src_face: Option<FID>,
     source: &PeerId,
     net_type: WhatAmI,
 ) {
@@ -627,7 +628,7 @@ fn propagate_forget_sourced_queryable(
 
 fn unregister_router_queryable(
     tables: &mut Tables,
-    res: &mut Arc<Resource>,
+    res: RID,
     kind: ZInt,
     router: &PeerId,
 ) {
@@ -652,8 +653,8 @@ fn unregister_router_queryable(
 
 fn undeclare_router_queryable(
     tables: &mut Tables,
-    face: Option<&Arc<FaceState>>,
-    res: &mut Arc<Resource>,
+    face: Option<FID>,
+    res: RID,
     kind: ZInt,
     router: &PeerId,
 ) {
@@ -665,7 +666,7 @@ fn undeclare_router_queryable(
 
 pub fn forget_router_queryable(
     tables: &mut Tables,
-    face: &mut Arc<FaceState>,
+    face: FID,
     expr: &KeyExpr,
     kind: ZInt,
     router: &PeerId,
@@ -686,7 +687,7 @@ pub fn forget_router_queryable(
 
 fn unregister_peer_queryable(
     tables: &mut Tables,
-    res: &mut Arc<Resource>,
+    res: FID,
     kind: ZInt,
     peer: &PeerId,
 ) {
@@ -708,8 +709,8 @@ fn unregister_peer_queryable(
 
 fn undeclare_peer_queryable(
     tables: &mut Tables,
-    face: Option<&Arc<FaceState>>,
-    res: &mut Arc<Resource>,
+    face: Option<FID>,
+    res: RID,
     kind: ZInt,
     peer: &PeerId,
 ) {
@@ -721,7 +722,7 @@ fn undeclare_peer_queryable(
 
 pub fn forget_peer_queryable(
     tables: &mut Tables,
-    face: &mut Arc<FaceState>,
+    face: FID,
     expr: &KeyExpr,
     kind: ZInt,
     peer: &PeerId,
@@ -769,8 +770,8 @@ pub fn forget_peer_queryable(
 
 pub(crate) fn undeclare_client_queryable(
     tables: &mut Tables,
-    face: &mut Arc<FaceState>,
-    res: &mut Arc<Resource>,
+    face: FID,
+    res: RID,
     kind: ZInt,
 ) {
     log::debug!(
@@ -806,7 +807,7 @@ pub(crate) fn undeclare_client_queryable(
                 undeclare_peer_queryable(tables, None, res, kind, &tables.pid.clone());
             } else {
                 let local_info = local_peer_qabl_info(tables, res, kind);
-                register_peer_queryable::<&Arc<FaceState>>(
+                register_peer_queryable(
                     tables,
                     None,
                     res,
@@ -843,7 +844,7 @@ pub(crate) fn undeclare_client_queryable(
 
 pub fn forget_client_queryable(
     tables: &mut Tables,
-    face: &mut Arc<FaceState>,
+    face: FID,
     expr: &KeyExpr,
     kind: ZInt,
 ) {
@@ -858,7 +859,7 @@ pub fn forget_client_queryable(
     }
 }
 
-pub(crate) fn queries_new_face(tables: &mut Tables, face: &mut Arc<FaceState>) {
+pub(crate) fn queries_new_face(tables: &mut Tables, face: FID) {
     if face.whatami == Client && tables.whatami != Client {
         for qabl in &tables.router_qabls {
             if let Some(ctx) = qabl.context.as_ref() {
@@ -878,8 +879,6 @@ pub(crate) fn queries_new_face(tables: &mut Tables, face: &mut Arc<FaceState>) {
         for face in tables
             .faces
             .values()
-            .cloned()
-            .collect::<Vec<Arc<FaceState>>>()
         {
             for (qabl, kind) in &face.remote_qabls {
                 propagate_simple_queryable(tables, qabl, *kind, None);
@@ -978,7 +977,7 @@ pub(crate) fn queries_tree_change(
                     };
                     for ((qabl, kind), qabl_info) in qabls {
                         if *qabl == tree_id {
-                            send_sourced_queryable_to_net_childs::<&Arc<FaceState>>(
+                            send_sourced_queryable_to_net_childs(
                                 tables,
                                 net,
                                 tree_childs,
@@ -1008,7 +1007,7 @@ fn matching_kind(query_kind: ZInt, qabl_kind: ZInt) -> bool {
 #[allow(clippy::too_many_arguments)]
 fn insert_target_for_qabls(
     route: &mut TargetQablSet,
-    prefix: &Arc<Resource>,
+    prefix: RID,
     suffix: &str,
     tables: &Tables,
     net: &Network,
@@ -1053,7 +1052,7 @@ fn insert_target_for_qabls(
 
 fn compute_query_route(
     tables: &Tables,
-    prefix: &Arc<Resource>,
+    prefix: RID,
     suffix: &str,
     source: Option<usize>,
     source_type: WhatAmI,
@@ -1147,7 +1146,7 @@ fn compute_query_route(
     Arc::new(route)
 }
 
-pub(crate) fn compute_query_routes(tables: &mut Tables, res: &mut Arc<Resource>) {
+pub(crate) fn compute_query_routes(tables: &mut Tables, res: RID) {
     if res.context.is_some() {
         let mut res_mut = res.clone();
         let res_mut = get_mut_unchecked(&mut res_mut);
@@ -1195,7 +1194,7 @@ pub(crate) fn compute_query_routes(tables: &mut Tables, res: &mut Arc<Resource>)
     }
 }
 
-fn compute_query_routes_from(tables: &mut Tables, res: &mut Arc<Resource>) {
+fn compute_query_routes_from(tables: &mut Tables, res: RID) {
     compute_query_routes(tables, res);
     let res = get_mut_unchecked(res);
     for child in res.childs.values_mut() {
@@ -1203,7 +1202,7 @@ fn compute_query_routes_from(tables: &mut Tables, res: &mut Arc<Resource>) {
     }
 }
 
-pub(crate) fn compute_matches_query_routes(tables: &mut Tables, res: &mut Arc<Resource>) {
+pub(crate) fn compute_matches_query_routes(tables: &mut Tables, res: RID) {
     if res.context.is_some() {
         compute_query_routes(tables, res);
 
@@ -1219,7 +1218,7 @@ pub(crate) fn compute_matches_query_routes(tables: &mut Tables, res: &mut Arc<Re
 #[inline]
 fn compute_final_route(
     qabls: &Arc<TargetQablSet>,
-    src_face: &Arc<FaceState>,
+    src_face: FID,
     target: &QueryTarget,
 ) -> QueryRoute {
     match &target.target {
@@ -1352,7 +1351,7 @@ impl Timed for QueryCleanup {
 #[allow(clippy::too_many_arguments)]
 pub fn route_query(
     tables_ref: &Arc<RwLock<Tables>>,
-    face: &Arc<FaceState>,
+    face: FID,
     expr: &KeyExpr,
     value_selector: &str,
     qid: ZInt,
@@ -1527,8 +1526,8 @@ pub fn route_query(
 
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn route_send_reply_data(
-    _tables: &mut Tables,
-    face: &mut Arc<FaceState>,
+    tables: &mut Tables,
+    face: FID,
     qid: ZInt,
     replier_kind: ZInt,
     replier_id: PeerId,
@@ -1556,7 +1555,7 @@ pub(crate) fn route_send_reply_data(
     }
 }
 
-pub(crate) fn route_send_reply_final(_tables: &mut Tables, face: &mut Arc<FaceState>, qid: ZInt) {
+pub(crate) fn route_send_reply_final(tables: &mut Tables, face: FID, qid: ZInt) {
     match get_mut_unchecked(face).pending_queries.remove(&qid) {
         Some(query) => {
             log::debug!(
@@ -1565,7 +1564,7 @@ pub(crate) fn route_send_reply_final(_tables: &mut Tables, face: &mut Arc<FaceSt
                 qid,
                 face
             );
-            finalize_pending_query(_tables, &query);
+            finalize_pending_query(tables, &query);
         }
         None => log::warn!(
             "Route final reply {}:{} from {}: Query nof found!",
@@ -1576,7 +1575,7 @@ pub(crate) fn route_send_reply_final(_tables: &mut Tables, face: &mut Arc<FaceSt
     }
 }
 
-pub(crate) fn finalize_pending_queries(_tables: &mut Tables, face: &mut Arc<FaceState>) {
+pub(crate) fn finalize_pending_queries(tables: &mut Tables, face: FID) {
     for query in face.pending_queries.values() {
         log::debug!(
             "Finalize reply {}:{} for closing {}",
@@ -1584,7 +1583,7 @@ pub(crate) fn finalize_pending_queries(_tables: &mut Tables, face: &mut Arc<Face
             query.src_qid,
             face
         );
-        finalize_pending_query(_tables, query);
+        finalize_pending_query(tables, query);
     }
     get_mut_unchecked(face).pending_queries.clear();
 }

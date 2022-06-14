@@ -12,6 +12,7 @@
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
 use super::face::FaceState;
+use super::id::{FID, RID};
 use super::router::Tables;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
@@ -52,7 +53,7 @@ pub(super) struct ResourceContext {
     pub(super) peer_subs: HashSet<PeerId>,
     pub(super) router_qabls: HashMap<(PeerId, ZInt), QueryableInfo>,
     pub(super) peer_qabls: HashMap<(PeerId, ZInt), QueryableInfo>,
-    pub(super) matches: Vec<Weak<Resource>>,
+    pub(super) matches: Vec<FID>,
     pub(super) matching_pulls: Arc<PullCaches>,
     pub(super) routers_data_routes: Vec<Arc<Route>>,
     pub(super) peers_data_routes: Vec<Arc<Route>>,
@@ -256,7 +257,7 @@ impl Resource {
 
     pub fn make_resource(
         tables: &mut Tables,
-        from: &mut Arc<Resource>,
+        from: RID,
         suffix: &str,
     ) -> Arc<Resource> {
         if suffix.is_empty() {
@@ -359,7 +360,7 @@ impl Resource {
     }
 
     #[inline]
-    pub fn decl_key(res: &Arc<Resource>, face: &mut Arc<FaceState>) -> KeyExpr<'static> {
+    pub fn decl_key(res: &Arc<Resource>, face: FID) -> KeyExpr<'static> {
         let (nonwild_prefix, wildsuffix) = Resource::nonwild_prefix(res);
         match nonwild_prefix {
             Some(mut nonwild_prefix) => {
@@ -526,7 +527,7 @@ impl Resource {
 
 pub fn register_expr(
     tables: &mut Tables,
-    face: &mut Arc<FaceState>,
+    face: FID,
     expr_id: ZInt,
     expr: &KeyExpr,
 ) {
@@ -577,7 +578,7 @@ pub fn register_expr(
     }
 }
 
-pub fn unregister_expr(_tables: &mut Tables, face: &mut Arc<FaceState>, expr_id: ZInt) {
+pub fn unregister_expr(tables: &mut Tables, face: FID, expr_id: ZInt) {
     match get_mut_unchecked(face).remote_mappings.remove(&expr_id) {
         Some(mut res) => Resource::clean(&mut res),
         None => log::error!("Undeclare unknown resource!"),

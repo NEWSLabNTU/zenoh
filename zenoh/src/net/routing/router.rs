@@ -12,6 +12,7 @@
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
 use super::face::{Face, FaceState};
+use super::id::FID;
 use super::network::{shared_nodes, Network};
 pub use super::pubsub::*;
 pub use super::queries::*;
@@ -120,8 +121,8 @@ impl Tables {
     }
 
     #[inline]
-    pub(crate) fn get_face(&self, pid: &PeerId) -> Option<&Arc<FaceState>> {
-        self.faces.values().find(|face| face.pid == *pid)
+    pub(crate) fn get_face(&self, fid: FID) -> Option<&FaceState> {
+        todo!();
     }
 
     fn open_net_face(
@@ -155,7 +156,7 @@ impl Tables {
         self.open_net_face(pid, whatami, primitives, 0)
     }
 
-    pub fn close_face(&mut self, face: &Weak<FaceState>) {
+    pub fn close_face(&mut self, face: FID) {
         match face.upgrade() {
             Some(mut face) => {
                 log::debug!("Close {}", face);

@@ -1,3 +1,4 @@
+use super::id::{RID, FID};
 //
 // Copyright (c) 2022 ZettaScale Technology
 //
@@ -31,12 +32,12 @@ pub struct FaceState {
     pub(super) whatami: WhatAmI,
     pub(super) primitives: Arc<dyn Primitives + Send + Sync>,
     pub(super) link_id: usize,
-    pub(super) local_mappings: HashMap<ZInt, Arc<Resource>>,
-    pub(super) remote_mappings: HashMap<ZInt, Arc<Resource>>,
-    pub(super) local_subs: HashSet<Arc<Resource>>,
-    pub(super) remote_subs: HashSet<Arc<Resource>>,
-    pub(super) local_qabls: HashMap<(Arc<Resource>, ZInt), QueryableInfo>,
-    pub(super) remote_qabls: HashSet<(Arc<Resource>, ZInt)>,
+    pub(super) local_mappings: HashMap<ZInt, RID>,
+    pub(super) remote_mappings: HashMap<ZInt, RID>,
+    pub(super) local_subs: HashSet<RID>,
+    pub(super) remote_subs: HashSet<RID>,
+    pub(super) local_qabls: HashMap<(RID, ZInt), QueryableInfo>,
+    pub(super) remote_qabls: HashSet<(RID, ZInt)>,
     pub(super) next_qid: ZInt,
     pub(super) pending_queries: HashMap<ZInt, Arc<Query>>,
 }
@@ -68,11 +69,12 @@ impl FaceState {
 
     #[inline]
     #[allow(clippy::trivially_copy_pass_by_ref)]
-    pub(super) fn get_mapping(&self, prefixid: &ZInt) -> Option<&Arc<Resource>> {
+    pub(super) fn get_mapping(&self, prefixid: &ZInt) -> Option<RID> {
         match self.remote_mappings.get(prefixid) {
             Some(prefix) => Some(prefix),
             None => self.local_mappings.get(prefixid),
         }
+        .cloned()
     }
 
     pub(super) fn get_next_local_id(&self) -> ZInt {
@@ -161,18 +163,18 @@ impl fmt::Display for FaceState {
 #[derive(Clone)]
 pub struct Face {
     pub(crate) tables: Arc<RwLock<Tables>>,
-    pub(crate) state: Arc<FaceState>,
+    pub(crate) fid: FID,
 }
 
 impl Primitives for Face {
     fn decl_resource(&self, expr_id: ZInt, key_expr: &KeyExpr) {
         let mut tables = zwrite!(self.tables);
-        register_expr(&mut tables, &mut self.state.clone(), expr_id, key_expr);
+        register_expr(&mut tables, self.fid, expr_id, key_expr);
     }
 
     fn forget_resource(&self, expr_id: ZInt) {
         let mut tables = zwrite!(self.tables);
-        unregister_expr(&mut tables, &mut self.state.clone(), expr_id);
+        unregister_expr(&mut tables, self.fid, expr_id);
     }
 
     fn decl_subscriber(
@@ -182,12 +184,13 @@ impl Primitives for Face {
         routing_context: Option<RoutingContext>,
     ) {
         let mut tables = zwrite!(self.tables);
-        match (tables.whatami, self.state.whatami) {
+        let state = tables.get_face(self.fid).unwrap();
+        match (tables.whatami, state.whatami) {
             (Router, Router) => {
-                if let Some(router) = self.state.get_router(&tables, routing_context) {
+                if let Some(router) = state.get_router(&tables, routing_context) {
                     declare_router_subscription(
                         &mut tables,
-                        &mut self.state.clone(),
+                        self.fid,
                         key_expr,
                         sub_info,
                         router,
@@ -195,10 +198,10 @@ impl Primitives for Face {
                 }
             }
             (Router, Peer) | (Peer, Router) | (Peer, Peer) => {
-                if let Some(peer) = self.state.get_peer(&tables, routing_context) {
+                if let Some(peer) = state.get_peer(&tables, routing_context) {
                     declare_peer_subscription(
                         &mut tables,
-                        &mut self.state.clone(),
+                        self.fid,
                         key_expr,
                         sub_info,
                         peer,
@@ -207,7 +210,7 @@ impl Primitives for Face {
             }
             _ => declare_client_subscription(
                 &mut tables,
-                &mut self.state.clone(),
+                self.fid,
                 key_expr,
                 sub_info,
             ),
@@ -216,23 +219,24 @@ impl Primitives for Face {
 
     fn forget_subscriber(&self, key_expr: &KeyExpr, routing_context: Option<RoutingContext>) {
         let mut tables = zwrite!(self.tables);
-        match (tables.whatami, self.state.whatami) {
+        let state = tables.get_face(self.fid).unwrap();
+        match (tables.whatami, state.whatami) {
             (Router, Router) => {
-                if let Some(router) = self.state.get_router(&tables, routing_context) {
+                if let Some(router) = state.get_router(&tables, routing_context) {
                     forget_router_subscription(
                         &mut tables,
-                        &mut self.state.clone(),
+                        self.fid,
                         key_expr,
                         &router,
                     )
                 }
             }
             (Router, Peer) | (Peer, Router) | (Peer, Peer) => {
-                if let Some(peer) = self.state.get_peer(&tables, routing_context) {
-                    forget_peer_subscription(&mut tables, &mut self.state.clone(), key_expr, &peer)
+                if let Some(peer) = state.get_peer(&tables, routing_context) {
+                    forget_peer_subscription(&mut tables, self.fid, key_expr, &peer)
                 }
             }
-            _ => forget_client_subscription(&mut tables, &mut self.state.clone(), key_expr),
+            _ => forget_client_subscription(&mut tables, self.fid, key_expr),
         }
     }
 
@@ -248,12 +252,13 @@ impl Primitives for Face {
         routing_context: Option<RoutingContext>,
     ) {
         let mut tables = zwrite!(self.tables);
-        match (tables.whatami, self.state.whatami) {
+        let state = tables.get_face(self.fid).unwrap();
+        match (tables.whatami, state.whatami) {
             (Router, Router) => {
-                if let Some(router) = self.state.get_router(&tables, routing_context) {
+                if let Some(router) = state.get_router(&tables, routing_context) {
                     declare_router_queryable(
                         &mut tables,
-                        &mut self.state.clone(),
+                        self.fid,
                         key_expr,
                         kind,
                         qabl_info,
@@ -262,10 +267,10 @@ impl Primitives for Face {
                 }
             }
             (Router, Peer) | (Peer, Router) | (Peer, Peer) => {
-                if let Some(peer) = self.state.get_peer(&tables, routing_context) {
+                if let Some(peer) = state.get_peer(&tables, routing_context) {
                     declare_peer_queryable(
                         &mut tables,
-                        &mut self.state.clone(),
+                        self.fid,
                         key_expr,
                         kind,
                         qabl_info,
@@ -275,7 +280,7 @@ impl Primitives for Face {
             }
             _ => declare_client_queryable(
                 &mut tables,
-                &mut self.state.clone(),
+                self.fid,
                 key_expr,
                 kind,
                 qabl_info,
@@ -290,12 +295,13 @@ impl Primitives for Face {
         routing_context: Option<RoutingContext>,
     ) {
         let mut tables = zwrite!(self.tables);
-        match (tables.whatami, self.state.whatami) {
+        let state = tables.get_face(self.fid).unwrap();
+        match (tables.whatami, state.whatami) {
             (Router, Router) => {
-                if let Some(router) = self.state.get_router(&tables, routing_context) {
+                if let Some(router) = state.get_router(&tables, routing_context) {
                     forget_router_queryable(
                         &mut tables,
-                        &mut self.state.clone(),
+                        self.fid,
                         key_expr,
                         kind,
                         &router,
@@ -303,17 +309,17 @@ impl Primitives for Face {
                 }
             }
             (Router, Peer) | (Peer, Router) | (Peer, Peer) => {
-                if let Some(peer) = self.state.get_peer(&tables, routing_context) {
+                if let Some(peer) = state.get_peer(&tables, routing_context) {
                     forget_peer_queryable(
                         &mut tables,
-                        &mut self.state.clone(),
+                        self.fid,
                         key_expr,
                         kind,
                         &peer,
                     )
                 }
             }
-            _ => forget_client_queryable(&mut tables, &mut self.state.clone(), key_expr, kind),
+            _ => forget_client_queryable(&mut tables, self.fid, key_expr, kind),
         }
     }
 
@@ -328,7 +334,7 @@ impl Primitives for Face {
     ) {
         full_reentrant_route_data(
             &self.tables,
-            &self.state,
+            self.fid,
             key_expr,
             channel,
             congestion_control,
@@ -349,7 +355,7 @@ impl Primitives for Face {
     ) {
         route_query(
             &self.tables,
-            &self.state,
+            self.fid,
             key_expr,
             value_selector,
             qid,
@@ -371,7 +377,7 @@ impl Primitives for Face {
         let mut tables = zwrite!(self.tables);
         route_send_reply_data(
             &mut tables,
-            &mut self.state.clone(),
+            self.fid,
             qid,
             replier_kind,
             replier_id,
@@ -383,7 +389,7 @@ impl Primitives for Face {
 
     fn send_reply_final(&self, qid: ZInt) {
         let mut tables = zwrite!(self.tables);
-        route_send_reply_final(&mut tables, &mut self.state.clone(), qid);
+        route_send_reply_final(&mut tables, self.fid, qid);
     }
 
     fn send_pull(
@@ -396,7 +402,7 @@ impl Primitives for Face {
         let mut tables = zwrite!(self.tables);
         pull_data(
             &mut tables,
-            &self.state.clone(),
+            self.fid,
             is_final,
             key_expr,
             pull_id,
@@ -405,12 +411,13 @@ impl Primitives for Face {
     }
 
     fn send_close(&self) {
-        zwrite!(self.tables).close_face(&Arc::downgrade(&self.state));
+        zwrite!(self.tables).close_face(self.fid);
     }
 }
 
 impl fmt::Display for Face {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.state.fmt(f)
+        // self.state.fmt(f)
+        todo!();
     }
 }

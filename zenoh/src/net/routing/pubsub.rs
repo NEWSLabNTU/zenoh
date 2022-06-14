@@ -28,6 +28,7 @@ use zenoh_protocol_core::{
 };
 
 use super::face::FaceState;
+use super::id::{RID, FID};
 use super::network::Network;
 use super::resource::{elect_router, PullCaches, Resource, Route, SessionContext};
 use super::router::Tables;
@@ -44,7 +45,7 @@ fn send_sourced_subscription_to_net_childs(
 ) {
     for child in childs {
         if net.graph.contains_node(*child) {
-            match tables.get_face(&net.graph[*child].pid).cloned() {
+            match tables.get_face(&net.graph[*child].pid) {
                 Some(mut someface) => {
                     if src_face.is_none() || someface.id != src_face.unwrap().id {
                         let key_expr = Resource::decl_key(res, &mut someface);
@@ -64,13 +65,13 @@ fn send_sourced_subscription_to_net_childs(
 
 fn propagate_simple_subscription(
     tables: &mut Tables,
-    res: &Arc<Resource>,
+    res: RID,
     sub_info: &SubInfo,
-    src_face: &mut Arc<FaceState>,
+    src_face: FID,
 ) {
     for dst_face in &mut tables.faces.values_mut() {
         if src_face.id != dst_face.id
-            && !dst_face.local_subs.contains(res)
+            && !dst_face.local_subs.contains(&res)
             && match tables.whatami {
                 Router => dst_face.whatami == Client,
                 Peer => dst_face.whatami == Client,
@@ -126,8 +127,8 @@ fn propagate_sourced_subscription(
 
 fn register_router_subscription(
     tables: &mut Tables,
-    face: &mut Arc<FaceState>,
-    res: &mut Arc<Resource>,
+    face: FID,
+    res: RID,
     sub_info: &SubInfo,
     router: PeerId,
 ) {
@@ -160,7 +161,7 @@ fn register_router_subscription(
 
 pub fn declare_router_subscription(
     tables: &mut Tables,
-    face: &mut Arc<FaceState>,
+    face: FID,
     expr: &KeyExpr,
     sub_info: &SubInfo,
     router: PeerId,
@@ -182,8 +183,8 @@ pub fn declare_router_subscription(
 
 fn register_peer_subscription(
     tables: &mut Tables,
-    face: &mut Arc<FaceState>,
-    res: &mut Arc<Resource>,
+    face: FID,
+    res: RID,
     sub_info: &SubInfo,
     peer: PeerId,
 ) {
@@ -202,7 +203,7 @@ fn register_peer_subscription(
 
 pub fn declare_peer_subscription(
     tables: &mut Tables,
-    face: &mut Arc<FaceState>,
+    face: FID,
     expr: &KeyExpr,
     sub_info: &SubInfo,
     peer: PeerId,
@@ -230,8 +231,8 @@ pub fn declare_peer_subscription(
 
 fn register_client_subscription(
     _tables: &mut Tables,
-    face: &mut Arc<FaceState>,
-    res: &mut Arc<Resource>,
+    face: FID,
+    res: RID,
     sub_info: &SubInfo,
 ) {
     // Register subscription
@@ -269,7 +270,7 @@ fn register_client_subscription(
 
 pub fn declare_client_subscription(
     tables: &mut Tables,
-    face: &mut Arc<FaceState>,
+    face: FID,
     expr: &KeyExpr,
     sub_info: &SubInfo,
 ) {
@@ -372,7 +373,7 @@ fn send_forget_sourced_subscription_to_net_childs(
     }
 }
 
-fn propagate_forget_simple_subscription(tables: &mut Tables, res: &Arc<Resource>) {
+fn propagate_forget_simple_subscription(tables: &mut Tables, res: RID) {
     for face in tables.faces.values_mut() {
         if face.local_subs.contains(res) {
             let key_expr = Resource::get_best_key(res, "", face.id);
@@ -419,7 +420,7 @@ fn propagate_forget_sourced_subscription(
     }
 }
 
-fn unregister_router_subscription(tables: &mut Tables, res: &mut Arc<Resource>, router: &PeerId) {
+fn unregister_router_subscription(tables: &mut Tables, res: RID, router: &PeerId) {
     debug!(
         "Unregister router subscription {} (router: {})",
         res.expr(),
@@ -440,8 +441,8 @@ fn unregister_router_subscription(tables: &mut Tables, res: &mut Arc<Resource>, 
 
 fn undeclare_router_subscription(
     tables: &mut Tables,
-    face: Option<&Arc<FaceState>>,
-    res: &mut Arc<Resource>,
+    face: Option<FID>,
+    res: RID,
     router: &PeerId,
 ) {
     if res.context().router_subs.contains(router) {
@@ -452,7 +453,7 @@ fn undeclare_router_subscription(
 
 pub fn forget_router_subscription(
     tables: &mut Tables,
-    face: &mut Arc<FaceState>,
+    face: FID,
     expr: &KeyExpr,
     router: &PeerId,
 ) {
@@ -470,7 +471,7 @@ pub fn forget_router_subscription(
     }
 }
 
-fn unregister_peer_subscription(tables: &mut Tables, res: &mut Arc<Resource>, peer: &PeerId) {
+fn unregister_peer_subscription(tables: &mut Tables, res: RID, peer: &PeerId) {
     debug!(
         "Unregister peer subscription {} (peer: {})",
         res.expr(),
@@ -488,8 +489,8 @@ fn unregister_peer_subscription(tables: &mut Tables, res: &mut Arc<Resource>, pe
 
 fn undeclare_peer_subscription(
     tables: &mut Tables,
-    face: Option<&Arc<FaceState>>,
-    res: &mut Arc<Resource>,
+    face: Option<RID>,
+    res: RID,
     peer: &PeerId,
 ) {
     if res.context().peer_subs.contains(peer) {
@@ -500,7 +501,7 @@ fn undeclare_peer_subscription(
 
 pub fn forget_peer_subscription(
     tables: &mut Tables,
-    face: &mut Arc<FaceState>,
+    face: FID,
     expr: &KeyExpr,
     peer: &PeerId,
 ) {
@@ -528,8 +529,8 @@ pub fn forget_peer_subscription(
 
 pub(crate) fn undeclare_client_subscription(
     tables: &mut Tables,
-    face: &mut Arc<FaceState>,
-    res: &mut Arc<Resource>,
+    face: FID,
+    res: RID,
 ) {
     debug!("Unregister client subscription {} for {}", res.expr(), face);
     if let Some(ctx) = get_mut_unchecked(res).session_ctxs.get_mut(&face.id) {
@@ -571,7 +572,7 @@ pub(crate) fn undeclare_client_subscription(
     Resource::clean(res)
 }
 
-pub fn forget_client_subscription(tables: &mut Tables, face: &mut Arc<FaceState>, expr: &KeyExpr) {
+pub fn forget_client_subscription(tables: &mut Tables, face: FID, expr: &KeyExpr) {
     match tables.get_mapping(face, &expr.scope) {
         Some(prefix) => match Resource::get_resource(prefix, expr.suffix.as_ref()) {
             Some(mut res) => {
@@ -583,7 +584,7 @@ pub fn forget_client_subscription(tables: &mut Tables, face: &mut Arc<FaceState>
     }
 }
 
-pub(crate) fn pubsub_new_face(tables: &mut Tables, face: &mut Arc<FaceState>) {
+pub(crate) fn pubsub_new_face(tables: &mut Tables, face: FID) {
     let sub_info = SubInfo {
         reliability: Reliability::Reliable, // @TODO
         mode: SubMode::Push,
@@ -870,7 +871,7 @@ fn compute_matching_pulls(
     Arc::new(pull_caches)
 }
 
-pub(crate) fn compute_data_routes(tables: &mut Tables, res: &mut Arc<Resource>) {
+pub(crate) fn compute_data_routes(tables: &mut Tables, res: RID) {
     if res.context.is_some() {
         let mut res_mut = res.clone();
         let res_mut = get_mut_unchecked(&mut res_mut);
@@ -918,7 +919,7 @@ pub(crate) fn compute_data_routes(tables: &mut Tables, res: &mut Arc<Resource>) 
     }
 }
 
-fn compute_data_routes_from(tables: &mut Tables, res: &mut Arc<Resource>) {
+fn compute_data_routes_from(tables: &mut Tables, res: RID) {
     compute_data_routes(tables, res);
     let res = get_mut_unchecked(res);
     for child in res.childs.values_mut() {
@@ -926,7 +927,7 @@ fn compute_data_routes_from(tables: &mut Tables, res: &mut Arc<Resource>) {
     }
 }
 
-pub(crate) fn compute_matches_data_routes(tables: &mut Tables, res: &mut Arc<Resource>) {
+pub(crate) fn compute_matches_data_routes(tables: &mut Tables, res: RID) {
     if res.context.is_some() {
         compute_data_routes(tables, res);
 
@@ -1164,7 +1165,7 @@ pub fn route_data(
 #[allow(clippy::too_many_arguments)]
 pub fn full_reentrant_route_data(
     tables_ref: &Arc<RwLock<Tables>>,
-    face: &Arc<FaceState>,
+    face: FID,
     expr: &KeyExpr,
     channel: Channel,
     congestion_control: CongestionControl,
@@ -1223,7 +1224,7 @@ pub fn full_reentrant_route_data(
 
 pub fn pull_data(
     tables: &mut Tables,
-    face: &Arc<FaceState>,
+    face: FID,
     _is_final: bool,
     expr: &KeyExpr,
     _pull_id: ZInt,
