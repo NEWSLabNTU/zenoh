@@ -26,7 +26,7 @@ use std::time::Duration;
 use uhlc::HLC;
 use zenoh_link::Link;
 use zenoh_protocol::proto::{ZenohBody, ZenohMessage};
-use zenoh_protocol_core::{PeerId, WhatAmI, ZInt};
+use zenoh_protocol_core::{whatami::WhatAmI::*, PeerId, WhatAmI, ZInt};
 use zenoh_transport::{DeMux, Mux, Primitives, TransportPeerEventHandler, TransportUnicast};
 // use zenoh_collections::Timer;
 use zenoh_core::zconfigurable;
@@ -113,8 +113,8 @@ impl Tables {
     #[inline]
     pub(crate) fn get_net(&self, net_type: WhatAmI) -> Option<&Network> {
         match net_type {
-            WhatAmI::Router => self.routers_net.as_ref(),
-            WhatAmI::Peer => self.peers_net.as_ref(),
+            Router => self.routers_net.as_ref(),
+            Peer => self.peers_net.as_ref(),
             _ => None,
         }
     }
@@ -214,8 +214,8 @@ impl Tables {
         net_type: WhatAmI,
     ) {
         log::trace!("Schedule computations");
-        if (net_type == WhatAmI::Router && self.routers_trees_task.is_none())
-            || (net_type == WhatAmI::Peer && self.peers_trees_task.is_none())
+        if (net_type == Router && self.routers_trees_task.is_none())
+            || (net_type == Peer && self.peers_trees_task.is_none())
         {
             let task = Some(async_std::task::spawn(async move {
                 async_std::task::sleep(std::time::Duration::from_millis(*TREES_COMPUTATION_DELAY))
@@ -224,7 +224,7 @@ impl Tables {
 
                 log::trace!("Compute trees");
                 let new_childs = match net_type {
-                    WhatAmI::Router => tables.routers_net.as_mut().unwrap().compute_trees(),
+                    Router => tables.routers_net.as_mut().unwrap().compute_trees(),
                     _ => tables.peers_net.as_mut().unwrap().compute_trees(),
                 };
 
@@ -234,12 +234,12 @@ impl Tables {
 
                 log::trace!("Computations completed");
                 match net_type {
-                    WhatAmI::Router => tables.routers_trees_task = None,
+                    Router => tables.routers_trees_task = None,
                     _ => tables.peers_trees_task = None,
                 };
             }));
             match net_type {
-                WhatAmI::Router => self.routers_trees_task = task,
+                Router => self.routers_trees_task = task,
                 _ => self.peers_trees_task = task,
             };
         }
@@ -283,7 +283,7 @@ impl Router {
             peers_autoconnect,
             routers_autoconnect_gossip,
         ));
-        if runtime.whatami == WhatAmI::Router {
+        if runtime.whatami == Router {
             tables.routers_net = Some(Network::new(
                 "[Routers network]".to_string(),
                 tables.pid,
@@ -304,10 +304,7 @@ impl Router {
             state: {
                 let mut tables = zwrite!(self.tables);
                 let pid = tables.pid;
-                tables
-                    .open_face(pid, WhatAmI::Client, primitives)
-                    .upgrade()
-                    .unwrap()
+                tables.open_face(pid, Client, primitives).upgrade().unwrap()
             },
         })
     }
@@ -320,14 +317,12 @@ impl Router {
         let whatami = transport.get_whatami()?;
 
         let link_id = match (self.whatami, whatami) {
-            (WhatAmI::Router, WhatAmI::Router) => tables
+            (Router, Router) => tables
                 .routers_net
                 .as_mut()
                 .unwrap()
                 .add_link(transport.clone()),
-            (WhatAmI::Router, WhatAmI::Peer)
-            | (WhatAmI::Peer, WhatAmI::Router)
-            | (WhatAmI::Peer, WhatAmI::Peer) => tables
+            (Router, Peer) | (Peer, Router) | (Peer, Peer) => tables
                 .peers_net
                 .as_mut()
                 .unwrap()
@@ -335,7 +330,7 @@ impl Router {
             _ => 0,
         };
 
-        if tables.whatami == WhatAmI::Router {
+        if tables.whatami == Router {
             tables.shared_nodes = shared_nodes(
                 tables.routers_net.as_ref().unwrap(),
                 tables.peers_net.as_ref().unwrap(),
@@ -360,13 +355,11 @@ impl Router {
         ));
 
         match (self.whatami, whatami) {
-            (WhatAmI::Router, WhatAmI::Router) => {
-                tables.schedule_compute_trees(self.tables.clone(), WhatAmI::Router);
+            (Router, Router) => {
+                tables.schedule_compute_trees(self.tables.clone(), Router);
             }
-            (WhatAmI::Router, WhatAmI::Peer)
-            | (WhatAmI::Peer, WhatAmI::Router)
-            | (WhatAmI::Peer, WhatAmI::Peer) => {
-                tables.schedule_compute_trees(self.tables.clone(), WhatAmI::Peer);
+            (Router, Peer) | (Peer, Router) | (Peer, Peer) => {
+                tables.schedule_compute_trees(self.tables.clone(), Peer);
             }
             _ => (),
         }
@@ -467,12 +460,12 @@ impl TransportPeerEventHandler for LinkStateInterceptor {
             (Ok(pid), Ok(whatami)) => {
                 let mut tables = zwrite!(tables_ref);
                 match (tables.whatami, whatami) {
-                    (WhatAmI::Router, WhatAmI::Router) => {
+                    (Router, Router) => {
                         for (_, removed_node) in
                             tables.routers_net.as_mut().unwrap().remove_link(&pid)
                         {
-                            pubsub_remove_node(&mut tables, &removed_node.pid, WhatAmI::Router);
-                            queries_remove_node(&mut tables, &removed_node.pid, WhatAmI::Router);
+                            pubsub_remove_node(&mut tables, &removed_node.pid, Router);
+                            queries_remove_node(&mut tables, &removed_node.pid, Router);
                         }
 
                         tables.shared_nodes = shared_nodes(
@@ -480,26 +473,24 @@ impl TransportPeerEventHandler for LinkStateInterceptor {
                             tables.peers_net.as_ref().unwrap(),
                         );
 
-                        tables.schedule_compute_trees(tables_ref.clone(), WhatAmI::Router);
+                        tables.schedule_compute_trees(tables_ref.clone(), Router);
                     }
-                    (WhatAmI::Router, WhatAmI::Peer)
-                    | (WhatAmI::Peer, WhatAmI::Router)
-                    | (WhatAmI::Peer, WhatAmI::Peer) => {
+                    (Router, Peer) | (Peer, Router) | (Peer, Peer) => {
                         for (_, removed_node) in
                             tables.peers_net.as_mut().unwrap().remove_link(&pid)
                         {
-                            pubsub_remove_node(&mut tables, &removed_node.pid, WhatAmI::Peer);
-                            queries_remove_node(&mut tables, &removed_node.pid, WhatAmI::Peer);
+                            pubsub_remove_node(&mut tables, &removed_node.pid, Peer);
+                            queries_remove_node(&mut tables, &removed_node.pid, Peer);
                         }
 
-                        if tables.whatami == WhatAmI::Router {
+                        if tables.whatami == Router {
                             tables.shared_nodes = shared_nodes(
                                 tables.routers_net.as_ref().unwrap(),
                                 tables.peers_net.as_ref().unwrap(),
                             );
                         }
 
-                        tables.schedule_compute_trees(tables_ref.clone(), WhatAmI::Peer);
+                        tables.schedule_compute_trees(tables_ref.clone(), Peer);
                     }
                     _ => (),
                 };

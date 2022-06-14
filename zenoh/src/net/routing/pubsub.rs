@@ -1,3 +1,4 @@
+use log::{debug, error, trace};
 //
 // Copyright (c) 2022 ZettaScale Technology
 //
@@ -22,8 +23,8 @@ use zenoh_sync::get_mut_unchecked;
 use zenoh_protocol::io::ZBuf;
 use zenoh_protocol::proto::{DataInfo, RoutingContext};
 use zenoh_protocol_core::{
-    Channel, CongestionControl, KeyExpr, PeerId, Priority, Reliability, SubInfo, SubMode, WhatAmI,
-    ZInt,
+    whatami::WhatAmI::*, Channel, CongestionControl, KeyExpr, PeerId, Priority, Reliability,
+    SubInfo, SubMode, WhatAmI, ZInt,
 };
 
 use super::face::FaceState;
@@ -48,14 +49,14 @@ fn send_sourced_subscription_to_net_childs(
                     if src_face.is_none() || someface.id != src_face.unwrap().id {
                         let key_expr = Resource::decl_key(res, &mut someface);
 
-                        log::debug!("Send subscription {} on {}", res.expr(), someface);
+                        debug!("Send subscription {} on {}", res.expr(), someface);
 
                         someface
                             .primitives
                             .decl_subscriber(&key_expr, sub_info, routing_context);
                     }
                 }
-                None => log::trace!("Unable to find face for pid {}", net.graph[*child].pid),
+                None => trace!("Unable to find face for pid {}", net.graph[*child].pid),
             }
         }
     }
@@ -71,9 +72,9 @@ fn propagate_simple_subscription(
         if src_face.id != dst_face.id
             && !dst_face.local_subs.contains(res)
             && match tables.whatami {
-                WhatAmI::Router => dst_face.whatami == WhatAmI::Client,
-                WhatAmI::Peer => dst_face.whatami == WhatAmI::Client,
-                _ => (src_face.whatami == WhatAmI::Client || dst_face.whatami == WhatAmI::Client),
+                Router => dst_face.whatami == Client,
+                Peer => dst_face.whatami == Client,
+                _ => (src_face.whatami == Client || dst_face.whatami == Client),
             }
         {
             get_mut_unchecked(dst_face).local_subs.insert(res.clone());
@@ -107,7 +108,7 @@ fn propagate_sourced_subscription(
                     Some(RoutingContext::new(tree_sid.index() as ZInt)),
                 );
             } else {
-                log::trace!(
+                trace!(
                     "Propagating sub {}: tree for node {} sid:{} not yet ready",
                     res.expr(),
                     tree_sid.index(),
@@ -115,7 +116,7 @@ fn propagate_sourced_subscription(
                 );
             }
         }
-        None => log::error!(
+        None => error!(
             "Error propagating sub {}: cannot get index of {}!",
             res.expr(),
             source
@@ -133,7 +134,7 @@ fn register_router_subscription(
     if !res.context().router_subs.contains(&router) {
         // Register router subscription
         {
-            log::debug!(
+            debug!(
                 "Register router subscription {} (router: {})",
                 res.expr(),
                 router
@@ -146,10 +147,10 @@ fn register_router_subscription(
         }
 
         // Propagate subscription to routers
-        propagate_sourced_subscription(tables, res, sub_info, Some(face), &router, WhatAmI::Router);
+        propagate_sourced_subscription(tables, res, sub_info, Some(face), &router, Router);
     }
     // Propagate subscription to peers
-    if face.whatami != WhatAmI::Peer {
+    if face.whatami != Peer {
         register_peer_subscription(tables, face, res, sub_info, tables.pid)
     }
 
@@ -172,7 +173,7 @@ pub fn declare_router_subscription(
 
             compute_matches_data_routes(tables, &mut res);
         }
-        None => log::error!(
+        None => error!(
             "Declare router subscription for unknown scope {}!",
             expr.scope
         ),
@@ -189,13 +190,13 @@ fn register_peer_subscription(
     if !res.context().peer_subs.contains(&peer) {
         // Register peer subscription
         {
-            log::debug!("Register peer subscription {} (peer: {})", res.expr(), peer);
+            debug!("Register peer subscription {} (peer: {})", res.expr(), peer);
             get_mut_unchecked(res).context_mut().peer_subs.insert(peer);
             tables.peer_subs.insert(res.clone());
         }
 
         // Propagate subscription to peers
-        propagate_sourced_subscription(tables, res, sub_info, Some(face), &peer, WhatAmI::Peer);
+        propagate_sourced_subscription(tables, res, sub_info, Some(face), &peer, Peer);
     }
 }
 
@@ -212,7 +213,7 @@ pub fn declare_peer_subscription(
             Resource::match_resource(tables, &mut res);
             register_peer_subscription(tables, face, &mut res, sub_info, peer);
 
-            if tables.whatami == WhatAmI::Router {
+            if tables.whatami == Router {
                 let mut propa_sub_info = sub_info.clone();
                 propa_sub_info.mode = SubMode::Push;
                 register_router_subscription(tables, face, &mut res, &propa_sub_info, tables.pid);
@@ -220,7 +221,7 @@ pub fn declare_peer_subscription(
 
             compute_matches_data_routes(tables, &mut res);
         }
-        None => log::error!(
+        None => error!(
             "Declare router subscription for unknown scope {}!",
             expr.scope
         ),
@@ -236,7 +237,7 @@ fn register_client_subscription(
     // Register subscription
     {
         let res = get_mut_unchecked(res);
-        log::debug!("Register subscription {} for {}", res.expr(), face);
+        debug!("Register subscription {} for {}", res.expr(), face);
         match res.session_ctxs.get_mut(&face.id) {
             Some(ctx) => match &ctx.subs {
                 Some(info) => {
@@ -272,16 +273,16 @@ pub fn declare_client_subscription(
     expr: &KeyExpr,
     sub_info: &SubInfo,
 ) {
-    log::debug!("Register client subscription");
+    debug!("Register client subscription");
     match tables.get_mapping(face, &expr.scope).cloned() {
         Some(mut prefix) => {
             let mut res = Resource::make_resource(tables, &mut prefix, expr.suffix.as_ref());
-            log::debug!("Register client subscription {}", res.expr());
+            debug!("Register client subscription {}", res.expr());
             Resource::match_resource(tables, &mut res);
 
             register_client_subscription(tables, face, &mut res, sub_info);
             match tables.whatami {
-                WhatAmI::Router => {
+                Router => {
                     let mut propa_sub_info = sub_info.clone();
                     propa_sub_info.mode = SubMode::Push;
                     register_router_subscription(
@@ -292,7 +293,7 @@ pub fn declare_client_subscription(
                         tables.pid,
                     );
                 }
-                WhatAmI::Peer => {
+                Peer => {
                     let mut propa_sub_info = sub_info.clone();
                     propa_sub_info.mode = SubMode::Push;
                     register_peer_subscription(tables, face, &mut res, &propa_sub_info, tables.pid);
@@ -304,7 +305,7 @@ pub fn declare_client_subscription(
 
             compute_matches_data_routes(tables, &mut res);
         }
-        None => log::error!("Declare subscription for unknown scope {}!", expr.scope),
+        None => error!("Declare subscription for unknown scope {}!", expr.scope),
     }
 }
 
@@ -358,14 +359,14 @@ fn send_forget_sourced_subscription_to_net_childs(
                     if src_face.is_none() || someface.id != src_face.unwrap().id {
                         let key_expr = Resource::decl_key(res, &mut someface);
 
-                        log::debug!("Send forget subscription {} on {}", res.expr(), someface);
+                        debug!("Send forget subscription {} on {}", res.expr(), someface);
 
                         someface
                             .primitives
                             .forget_subscriber(&key_expr, routing_context);
                     }
                 }
-                None => log::trace!("Unable to find face for pid {}", net.graph[*child].pid),
+                None => trace!("Unable to find face for pid {}", net.graph[*child].pid),
             }
         }
     }
@@ -402,7 +403,7 @@ fn propagate_forget_sourced_subscription(
                     Some(RoutingContext::new(tree_sid.index() as ZInt)),
                 );
             } else {
-                log::trace!(
+                trace!(
                     "Propagating forget sub {}: tree for node {} sid:{} not yet ready",
                     res.expr(),
                     tree_sid.index(),
@@ -410,7 +411,7 @@ fn propagate_forget_sourced_subscription(
                 );
             }
         }
-        None => log::error!(
+        None => error!(
             "Error propagating forget sub {}: cannot get index of {}!",
             res.expr(),
             source
@@ -419,7 +420,7 @@ fn propagate_forget_sourced_subscription(
 }
 
 fn unregister_router_subscription(tables: &mut Tables, res: &mut Arc<Resource>, router: &PeerId) {
-    log::debug!(
+    debug!(
         "Unregister router subscription {} (router: {})",
         res.expr(),
         router
@@ -445,7 +446,7 @@ fn undeclare_router_subscription(
 ) {
     if res.context().router_subs.contains(router) {
         unregister_router_subscription(tables, res, router);
-        propagate_forget_sourced_subscription(tables, res, face, router, WhatAmI::Router);
+        propagate_forget_sourced_subscription(tables, res, face, router, Router);
     }
 }
 
@@ -463,14 +464,14 @@ pub fn forget_router_subscription(
                 compute_matches_data_routes(tables, &mut res);
                 Resource::clean(&mut res)
             }
-            None => log::error!("Undeclare unknown router subscription!"),
+            None => error!("Undeclare unknown router subscription!"),
         },
-        None => log::error!("Undeclare router subscription with unknown scope!"),
+        None => error!("Undeclare router subscription with unknown scope!"),
     }
 }
 
 fn unregister_peer_subscription(tables: &mut Tables, res: &mut Arc<Resource>, peer: &PeerId) {
-    log::debug!(
+    debug!(
         "Unregister peer subscription {} (peer: {})",
         res.expr(),
         peer
@@ -493,7 +494,7 @@ fn undeclare_peer_subscription(
 ) {
     if res.context().peer_subs.contains(peer) {
         unregister_peer_subscription(tables, res, peer);
-        propagate_forget_sourced_subscription(tables, res, face, peer, WhatAmI::Peer);
+        propagate_forget_sourced_subscription(tables, res, face, peer, Peer);
     }
 }
 
@@ -508,7 +509,7 @@ pub fn forget_peer_subscription(
             Some(mut res) => {
                 undeclare_peer_subscription(tables, Some(face), &mut res, peer);
 
-                if tables.whatami == WhatAmI::Router {
+                if tables.whatami == Router {
                     let client_subs = res.session_ctxs.values().any(|ctx| ctx.subs.is_some());
                     let peer_subs = remote_peer_subs(tables, &res);
                     if !client_subs && !peer_subs {
@@ -519,9 +520,9 @@ pub fn forget_peer_subscription(
                 compute_matches_data_routes(tables, &mut res);
                 Resource::clean(&mut res)
             }
-            None => log::error!("Undeclare unknown peer subscription!"),
+            None => error!("Undeclare unknown peer subscription!"),
         },
-        None => log::error!("Undeclare peer subscription with unknown scope!"),
+        None => error!("Undeclare peer subscription with unknown scope!"),
     }
 }
 
@@ -530,7 +531,7 @@ pub(crate) fn undeclare_client_subscription(
     face: &mut Arc<FaceState>,
     res: &mut Arc<Resource>,
 ) {
-    log::debug!("Unregister client subscription {} for {}", res.expr(), face);
+    debug!("Unregister client subscription {} for {}", res.expr(), face);
     if let Some(ctx) = get_mut_unchecked(res).session_ctxs.get_mut(&face.id) {
         get_mut_unchecked(ctx).subs = None;
     }
@@ -540,12 +541,12 @@ pub(crate) fn undeclare_client_subscription(
     let router_subs = remote_router_subs(tables, res);
     let peer_subs = remote_peer_subs(tables, res);
     match tables.whatami {
-        WhatAmI::Router => {
+        Router => {
             if client_subs.is_empty() && !peer_subs {
                 undeclare_router_subscription(tables, None, res, &tables.pid.clone());
             }
         }
-        WhatAmI::Peer => {
+        Peer => {
             if client_subs.is_empty() {
                 undeclare_peer_subscription(tables, None, res, &tables.pid.clone());
             }
@@ -576,9 +577,9 @@ pub fn forget_client_subscription(tables: &mut Tables, face: &mut Arc<FaceState>
             Some(mut res) => {
                 undeclare_client_subscription(tables, face, &mut res);
             }
-            None => log::error!("Undeclare unknown subscription!"),
+            None => error!("Undeclare unknown subscription!"),
         },
-        None => log::error!("Undeclare subscription with unknown scope!"),
+        None => error!("Undeclare subscription with unknown scope!"),
     }
 }
 
@@ -588,14 +589,14 @@ pub(crate) fn pubsub_new_face(tables: &mut Tables, face: &mut Arc<FaceState>) {
         mode: SubMode::Push,
         period: None,
     };
-    if face.whatami == WhatAmI::Client && tables.whatami != WhatAmI::Client {
+    if face.whatami == Client && tables.whatami != Client {
         for sub in &tables.router_subs {
             get_mut_unchecked(face).local_subs.insert(sub.clone());
             let key_expr = Resource::decl_key(sub, face);
             face.primitives.decl_subscriber(&key_expr, &sub_info, None);
         }
     }
-    if tables.whatami == WhatAmI::Client {
+    if tables.whatami == Client {
         for face in tables
             .faces
             .values()
@@ -611,7 +612,7 @@ pub(crate) fn pubsub_new_face(tables: &mut Tables, face: &mut Arc<FaceState>) {
 
 pub(crate) fn pubsub_remove_node(tables: &mut Tables, node: &PeerId, net_type: WhatAmI) {
     match net_type {
-        WhatAmI::Router => {
+        Router => {
             tables
                 .router_subs
                 .iter()
@@ -626,7 +627,7 @@ pub(crate) fn pubsub_remove_node(tables: &mut Tables, node: &PeerId, net_type: W
                     Resource::clean(&mut res)
                 });
         }
-        WhatAmI::Peer => {
+        Peer => {
             tables
                 .peer_subs
                 .iter()
@@ -637,7 +638,7 @@ pub(crate) fn pubsub_remove_node(tables: &mut Tables, node: &PeerId, net_type: W
                 .for_each(|mut res| {
                     unregister_peer_subscription(tables, &mut res, node);
 
-                    if tables.whatami == WhatAmI::Router {
+                    if tables.whatami == Router {
                         let client_subs = res.session_ctxs.values().any(|ctx| ctx.subs.is_some());
                         let peer_subs = remote_peer_subs(tables, &res);
                         if !client_subs && !peer_subs {
@@ -672,13 +673,13 @@ pub(crate) fn pubsub_tree_change(
                 let tree_id = net.graph[tree_idx].pid;
 
                 let subs_res = match net_type {
-                    WhatAmI::Router => &tables.router_subs,
+                    Router => &tables.router_subs,
                     _ => &tables.peer_subs,
                 };
 
                 for res in subs_res {
                     let subs = match net_type {
-                        WhatAmI::Router => &res.context().router_subs,
+                        Router => &res.context().router_subs,
                         _ => &res.context().peer_subs,
                     };
                     for sub in subs {
@@ -744,7 +745,7 @@ fn insert_faces_for_subs(
             }
         }
     } else {
-        log::trace!("Tree for node sid:{} not yet ready", source);
+        trace!("Tree for node sid:{} not yet ready", source);
     }
 }
 
@@ -764,16 +765,16 @@ fn compute_data_route(
         .map(|ctx| Cow::from(&ctx.matches))
         .unwrap_or_else(|| Cow::from(Resource::get_matches(tables, &key_expr)));
 
-    let master = tables.whatami != WhatAmI::Router
-        || *elect_router(&key_expr, &tables.shared_nodes) == tables.pid;
+    let master =
+        tables.whatami != Router || *elect_router(&key_expr, &tables.shared_nodes) == tables.pid;
 
     for mres in matches.iter() {
         let mres = mres.upgrade().unwrap();
-        if tables.whatami == WhatAmI::Router {
-            if master || source_type == WhatAmI::Router {
+        if tables.whatami == Router {
+            if master || source_type == Router {
                 let net = tables.routers_net.as_ref().unwrap();
                 let router_source = match source_type {
-                    WhatAmI::Router => source.unwrap(),
+                    Router => source.unwrap(),
                     _ => net.idx.index(),
                 };
                 insert_faces_for_subs(
@@ -787,10 +788,10 @@ fn compute_data_route(
                 );
             }
 
-            if master || source_type != WhatAmI::Router {
+            if master || source_type != Router {
                 let net = tables.peers_net.as_ref().unwrap();
                 let peer_source = match source_type {
-                    WhatAmI::Peer => source.unwrap(),
+                    Peer => source.unwrap(),
                     _ => net.idx.index(),
                 };
                 insert_faces_for_subs(
@@ -805,10 +806,10 @@ fn compute_data_route(
             }
         }
 
-        if tables.whatami == WhatAmI::Peer {
+        if tables.whatami == Peer {
             let net = tables.peers_net.as_ref().unwrap();
             let peer_source = match source_type {
-                WhatAmI::Router | WhatAmI::Peer => source.unwrap(),
+                Router | Peer => source.unwrap(),
                 _ => net.idx.index(),
             };
             insert_faces_for_subs(
@@ -822,7 +823,7 @@ fn compute_data_route(
             );
         }
 
-        if tables.whatami != WhatAmI::Router || master || source_type == WhatAmI::Router {
+        if tables.whatami != Router || master || source_type == Router {
             for (sid, context) in &mres.session_ctxs {
                 if let Some(subinfo) = &context.subs {
                     if subinfo.mode == SubMode::Push {
@@ -873,7 +874,7 @@ pub(crate) fn compute_data_routes(tables: &mut Tables, res: &mut Arc<Resource>) 
     if res.context.is_some() {
         let mut res_mut = res.clone();
         let res_mut = get_mut_unchecked(&mut res_mut);
-        if tables.whatami == WhatAmI::Router {
+        if tables.whatami == Router {
             let indexes = tables
                 .routers_net
                 .as_ref()
@@ -888,10 +889,10 @@ pub(crate) fn compute_data_routes(tables: &mut Tables, res: &mut Arc<Resource>) 
 
             for idx in &indexes {
                 routers_data_routes[idx.index()] =
-                    compute_data_route(tables, res, "", Some(idx.index()), WhatAmI::Router);
+                    compute_data_route(tables, res, "", Some(idx.index()), Router);
             }
         }
-        if tables.whatami == WhatAmI::Router || tables.whatami == WhatAmI::Peer {
+        if tables.whatami == Router || tables.whatami == Peer {
             let indexes = tables
                 .peers_net
                 .as_ref()
@@ -906,12 +907,12 @@ pub(crate) fn compute_data_routes(tables: &mut Tables, res: &mut Arc<Resource>) 
 
             for idx in &indexes {
                 peers_data_routes[idx.index()] =
-                    compute_data_route(tables, res, "", Some(idx.index()), WhatAmI::Peer);
+                    compute_data_route(tables, res, "", Some(idx.index()), Peer);
             }
         }
-        if tables.whatami == WhatAmI::Client {
+        if tables.whatami == Client {
             res_mut.context_mut().client_data_route =
-                Some(compute_data_route(tables, res, "", None, WhatAmI::Client));
+                Some(compute_data_route(tables, res, "", None, Client));
         }
         res_mut.context_mut().matching_pulls = compute_matching_pulls(tables, res, "");
     }
@@ -985,74 +986,52 @@ fn get_data_route(
     routing_context: Option<RoutingContext>,
 ) -> Arc<Route> {
     match tables.whatami {
-        WhatAmI::Router => match face.whatami {
-            WhatAmI::Router => {
+        Router => match face.whatami {
+            Router => {
                 let routers_net = tables.routers_net.as_ref().unwrap();
                 let local_context = routers_net
                     .get_local_context(routing_context.map(|rc| rc.tree_id), face.link_id);
                 res.as_ref()
                     .and_then(|res| res.routers_data_route(local_context))
                     .unwrap_or_else(|| {
-                        compute_data_route(
-                            tables,
-                            prefix,
-                            suffix,
-                            Some(local_context),
-                            WhatAmI::Router,
-                        )
+                        compute_data_route(tables, prefix, suffix, Some(local_context), Router)
                     })
             }
-            WhatAmI::Peer => {
+            Peer => {
                 let peers_net = tables.peers_net.as_ref().unwrap();
                 let local_context =
                     peers_net.get_local_context(routing_context.map(|rc| rc.tree_id), face.link_id);
                 res.as_ref()
                     .and_then(|res| res.peers_data_route(local_context))
                     .unwrap_or_else(|| {
-                        compute_data_route(
-                            tables,
-                            prefix,
-                            suffix,
-                            Some(local_context),
-                            WhatAmI::Peer,
-                        )
+                        compute_data_route(tables, prefix, suffix, Some(local_context), Peer)
                     })
             }
             _ => res
                 .as_ref()
                 .and_then(|res| res.routers_data_route(0))
-                .unwrap_or_else(|| {
-                    compute_data_route(tables, prefix, suffix, None, WhatAmI::Client)
-                }),
+                .unwrap_or_else(|| compute_data_route(tables, prefix, suffix, None, Client)),
         },
-        WhatAmI::Peer => match face.whatami {
-            WhatAmI::Router | WhatAmI::Peer => {
+        Peer => match face.whatami {
+            Router | Peer => {
                 let peers_net = tables.peers_net.as_ref().unwrap();
                 let local_context =
                     peers_net.get_local_context(routing_context.map(|rc| rc.tree_id), face.link_id);
                 res.as_ref()
                     .and_then(|res| res.peers_data_route(local_context))
                     .unwrap_or_else(|| {
-                        compute_data_route(
-                            tables,
-                            prefix,
-                            suffix,
-                            Some(local_context),
-                            WhatAmI::Peer,
-                        )
+                        compute_data_route(tables, prefix, suffix, Some(local_context), Peer)
                     })
             }
             _ => res
                 .as_ref()
                 .and_then(|res| res.peers_data_route(0))
-                .unwrap_or_else(|| {
-                    compute_data_route(tables, prefix, suffix, None, WhatAmI::Client)
-                }),
+                .unwrap_or_else(|| compute_data_route(tables, prefix, suffix, None, Client)),
         },
         _ => res
             .as_ref()
             .and_then(|res| res.client_data_route())
-            .unwrap_or_else(|| compute_data_route(tables, prefix, suffix, None, WhatAmI::Client)),
+            .unwrap_or_else(|| compute_data_route(tables, prefix, suffix, None, Client)),
     }
 }
 
@@ -1137,7 +1116,7 @@ pub fn route_data(
 ) {
     match tables.get_mapping(face, &expr.scope).cloned() {
         Some(prefix) => {
-            log::trace!(
+            trace!(
                 "Route data for res {}{}",
                 prefix.expr(),
                 expr.suffix.as_ref()
@@ -1176,7 +1155,7 @@ pub fn route_data(
             }
         }
         None => {
-            log::error!("Route data with unknown scope {}!", expr.scope);
+            error!("Route data with unknown scope {}!", expr.scope);
         }
     }
 }
@@ -1196,7 +1175,7 @@ pub fn full_reentrant_route_data(
     let tables = zread!(tables_ref);
     match tables.get_mapping(face, &expr.scope).cloned() {
         Some(prefix) => {
-            log::trace!(
+            trace!(
                 "Route data for res {}{}",
                 prefix.expr(),
                 expr.suffix.as_ref()
@@ -1237,7 +1216,7 @@ pub fn full_reentrant_route_data(
             }
         }
         None => {
-            log::error!("Route data with unknown scope {}!", expr.scope);
+            error!("Route data with unknown scope {}!", expr.scope);
         }
     }
 }
@@ -1277,14 +1256,14 @@ pub fn pull_data(
                             drop(lock);
                         }
                         None => {
-                            log::error!(
+                            error!(
                                 "Pull data for unknown subscription {} (no info)!",
                                 [&prefix.expr(), expr.suffix.as_ref()].concat()
                             );
                         }
                     },
                     None => {
-                        log::error!(
+                        error!(
                             "Pull data for unknown subscription {} (no context)!",
                             [&prefix.expr(), expr.suffix.as_ref()].concat()
                         );
@@ -1292,14 +1271,14 @@ pub fn pull_data(
                 }
             }
             None => {
-                log::error!(
+                error!(
                     "Pull data for unknown subscription {} (no resource)!",
                     [&prefix.expr(), expr.suffix.as_ref()].concat()
                 );
             }
         },
         None => {
-            log::error!("Pull data with unknown scope {}!", expr.scope);
+            error!("Pull data with unknown scope {}!", expr.scope);
         }
     };
 }

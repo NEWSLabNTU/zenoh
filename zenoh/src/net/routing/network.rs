@@ -17,7 +17,7 @@ use petgraph::visit::{IntoNodeReferences, VisitMap, Visitable};
 use std::convert::TryInto;
 use vec_map::VecMap;
 use zenoh_link::Locator;
-use zenoh_protocol::core::{PeerId, WhatAmI, ZInt};
+use zenoh_protocol::core::{whatami::WhatAmI::*, PeerId, WhatAmI, ZInt};
 use zenoh_protocol::proto::{LinkState, ZenohMessage};
 use zenoh_transport::TransportUnicast;
 
@@ -304,7 +304,7 @@ impl Network {
                     }
                     Some((
                         pid,
-                        link_state.whatami.unwrap_or(WhatAmI::Router),
+                        link_state.whatami.unwrap_or(Router),
                         link_state.locators,
                         link_state.sn,
                         link_state.links,
@@ -313,7 +313,7 @@ impl Network {
                     match src_link.get_pid(&link_state.psid) {
                         Some(pid) => Some((
                             *pid,
-                            link_state.whatami.unwrap_or(WhatAmI::Router),
+                            link_state.whatami.unwrap_or(Router),
                             link_state.locators,
                             link_state.sn,
                             link_state.links,
@@ -458,17 +458,15 @@ impl Network {
             .filter(|ls| !removed.iter().any(|(idx, _)| idx == &ls.1))
             .collect::<Vec<(Vec<PeerId>, NodeIndex, bool)>>();
 
-        if (self.peers_autoconnect && self.runtime.whatami == WhatAmI::Peer)
-            || (self.routers_autoconnect_gossip && self.runtime.whatami == WhatAmI::Router)
+        if (self.peers_autoconnect && self.runtime.whatami == Peer)
+            || (self.routers_autoconnect_gossip && self.runtime.whatami == Router)
         {
             // Connect discovered peers
             for (_, idx, _) in &link_states {
                 let node = &self.graph[*idx];
-                if (self.runtime.whatami == WhatAmI::Peer
-                    && (node.whatami == Some(WhatAmI::Peer)
-                        || node.whatami == Some(WhatAmI::Router)))
-                    || (self.runtime.whatami == WhatAmI::Router
-                        && node.whatami == Some(WhatAmI::Router))
+                if (self.runtime.whatami == Peer
+                    && (node.whatami == Some(Peer) || node.whatami == Some(Router)))
+                    || (self.runtime.whatami == Router && node.whatami == Some(Router))
                 {
                     if let Some(locators) = &node.locators {
                         let runtime = self.runtime.clone();

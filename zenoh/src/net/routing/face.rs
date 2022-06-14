@@ -12,6 +12,7 @@
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
 use super::router::*;
+use log::error;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::sync::Arc;
@@ -19,8 +20,8 @@ use std::sync::RwLock;
 use zenoh_protocol::io::ZBuf;
 use zenoh_protocol::proto::{DataInfo, RoutingContext};
 use zenoh_protocol_core::{
-    Channel, CongestionControl, ConsolidationStrategy, KeyExpr, PeerId, QueryTarget, QueryableInfo,
-    SubInfo, WhatAmI, ZInt,
+    whatami::WhatAmI::*, Channel, CongestionControl, ConsolidationStrategy, KeyExpr, PeerId,
+    QueryTarget, QueryableInfo, SubInfo, WhatAmI, ZInt,
 };
 use zenoh_transport::Primitives;
 
@@ -67,7 +68,7 @@ impl FaceState {
 
     #[inline]
     #[allow(clippy::trivially_copy_pass_by_ref)]
-    pub(super) fn get_mapping(&self, prefixid: &ZInt) -> Option<&std::sync::Arc<Resource>> {
+    pub(super) fn get_mapping(&self, prefixid: &ZInt) -> Option<&Arc<Resource>> {
         match self.remote_mappings.get(prefixid) {
             Some(prefix) => Some(prefix),
             None => self.local_mappings.get(prefixid),
@@ -93,7 +94,7 @@ impl FaceState {
                     Some(link) => match link.get_pid(&routing_context.tree_id) {
                         Some(router) => Some(*router),
                         None => {
-                            log::error!(
+                            error!(
                                 "Received router declaration with unknown routing context id {}",
                                 routing_context.tree_id
                             );
@@ -101,7 +102,7 @@ impl FaceState {
                         }
                     },
                     None => {
-                        log::error!(
+                        error!(
                             "Could not find corresponding link in routers network for {}",
                             self
                         );
@@ -110,7 +111,7 @@ impl FaceState {
                 }
             }
             None => {
-                log::error!("Received router declaration with no routing context");
+                error!("Received router declaration with no routing context");
                 None
             }
         }
@@ -127,7 +128,7 @@ impl FaceState {
                     Some(link) => match link.get_pid(&routing_context.tree_id) {
                         Some(router) => Some(*router),
                         None => {
-                            log::error!(
+                            error!(
                                 "Received peer declaration with unknown routing context id {}",
                                 routing_context.tree_id
                             );
@@ -135,7 +136,7 @@ impl FaceState {
                         }
                     },
                     None => {
-                        log::error!(
+                        error!(
                             "Could not find corresponding link in peers network for {}",
                             self
                         );
@@ -144,7 +145,7 @@ impl FaceState {
                 }
             }
             None => {
-                log::error!("Received peer declaration with no routing context");
+                error!("Received peer declaration with no routing context");
                 None
             }
         }
@@ -182,7 +183,7 @@ impl Primitives for Face {
     ) {
         let mut tables = zwrite!(self.tables);
         match (tables.whatami, self.state.whatami) {
-            (WhatAmI::Router, WhatAmI::Router) => {
+            (Router, Router) => {
                 if let Some(router) = self.state.get_router(&tables, routing_context) {
                     declare_router_subscription(
                         &mut tables,
@@ -193,9 +194,7 @@ impl Primitives for Face {
                     )
                 }
             }
-            (WhatAmI::Router, WhatAmI::Peer)
-            | (WhatAmI::Peer, WhatAmI::Router)
-            | (WhatAmI::Peer, WhatAmI::Peer) => {
+            (Router, Peer) | (Peer, Router) | (Peer, Peer) => {
                 if let Some(peer) = self.state.get_peer(&tables, routing_context) {
                     declare_peer_subscription(
                         &mut tables,
@@ -218,7 +217,7 @@ impl Primitives for Face {
     fn forget_subscriber(&self, key_expr: &KeyExpr, routing_context: Option<RoutingContext>) {
         let mut tables = zwrite!(self.tables);
         match (tables.whatami, self.state.whatami) {
-            (WhatAmI::Router, WhatAmI::Router) => {
+            (Router, Router) => {
                 if let Some(router) = self.state.get_router(&tables, routing_context) {
                     forget_router_subscription(
                         &mut tables,
@@ -228,9 +227,7 @@ impl Primitives for Face {
                     )
                 }
             }
-            (WhatAmI::Router, WhatAmI::Peer)
-            | (WhatAmI::Peer, WhatAmI::Router)
-            | (WhatAmI::Peer, WhatAmI::Peer) => {
+            (Router, Peer) | (Peer, Router) | (Peer, Peer) => {
                 if let Some(peer) = self.state.get_peer(&tables, routing_context) {
                     forget_peer_subscription(&mut tables, &mut self.state.clone(), key_expr, &peer)
                 }
@@ -252,7 +249,7 @@ impl Primitives for Face {
     ) {
         let mut tables = zwrite!(self.tables);
         match (tables.whatami, self.state.whatami) {
-            (WhatAmI::Router, WhatAmI::Router) => {
+            (Router, Router) => {
                 if let Some(router) = self.state.get_router(&tables, routing_context) {
                     declare_router_queryable(
                         &mut tables,
@@ -264,9 +261,7 @@ impl Primitives for Face {
                     )
                 }
             }
-            (WhatAmI::Router, WhatAmI::Peer)
-            | (WhatAmI::Peer, WhatAmI::Router)
-            | (WhatAmI::Peer, WhatAmI::Peer) => {
+            (Router, Peer) | (Peer, Router) | (Peer, Peer) => {
                 if let Some(peer) = self.state.get_peer(&tables, routing_context) {
                     declare_peer_queryable(
                         &mut tables,
@@ -296,7 +291,7 @@ impl Primitives for Face {
     ) {
         let mut tables = zwrite!(self.tables);
         match (tables.whatami, self.state.whatami) {
-            (WhatAmI::Router, WhatAmI::Router) => {
+            (Router, Router) => {
                 if let Some(router) = self.state.get_router(&tables, routing_context) {
                     forget_router_queryable(
                         &mut tables,
@@ -307,9 +302,7 @@ impl Primitives for Face {
                     )
                 }
             }
-            (WhatAmI::Router, WhatAmI::Peer)
-            | (WhatAmI::Peer, WhatAmI::Router)
-            | (WhatAmI::Peer, WhatAmI::Peer) => {
+            (Router, Peer) | (Peer, Router) | (Peer, Peer) => {
                 if let Some(peer) = self.state.get_peer(&tables, routing_context) {
                     forget_peer_queryable(
                         &mut tables,
