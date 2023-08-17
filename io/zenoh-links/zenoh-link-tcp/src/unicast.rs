@@ -20,6 +20,7 @@ use std::collections::HashMap;
 use std::convert::TryInto;
 use std::fmt;
 use std::net::{IpAddr, Shutdown};
+use std::os::fd::AsRawFd;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
@@ -27,7 +28,7 @@ use zenoh_core::{zread, zwrite};
 use zenoh_link_commons::{
     LinkManagerUnicastTrait, LinkUnicast, LinkUnicastTrait, NewLinkChannelSender,
 };
-use zenoh_protocol::core::{EndPoint, Locator};
+use zenoh_protocol::core::{EndPoint, Locator, Priority};
 use zenoh_result::{bail, zerror, Error as ZError, ZResult};
 use zenoh_sync::Signal;
 
@@ -152,6 +153,14 @@ impl LinkUnicastTrait for LinkUnicastTcp {
     #[inline(always)]
     fn is_streamed(&self) -> bool {
         true
+    }
+
+    fn set_priority(&self, priority: Priority) -> ZResult<()> {
+        use nix::sys::socket::sockopt::Priority as O_PRIORITY;
+        let fd = self.socket.as_raw_fd();
+        let priority = priority as u8 as i32;
+        nix::sys::socket::setsockopt(fd, O_PRIORITY, &priority)?;
+        Ok(())
     }
 }
 

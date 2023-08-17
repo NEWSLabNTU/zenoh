@@ -40,6 +40,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use webpki::TrustAnchor;
+use zenoh_config::Priority;
 use zenoh_core::{zasynclock, zread, zwrite};
 use zenoh_link_commons::{
     LinkManagerUnicastTrait, LinkUnicast, LinkUnicastTrait, NewLinkChannelSender,
@@ -197,6 +198,11 @@ impl LinkUnicastTrait for LinkUnicastTls {
     #[inline(always)]
     fn is_streamed(&self) -> bool {
         true
+    }
+
+    fn set_priority(&self, _priority: Priority) -> ZResult<()> {
+        // no-op
+        Ok(())
     }
 }
 

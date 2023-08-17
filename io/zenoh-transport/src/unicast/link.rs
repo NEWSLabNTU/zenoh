@@ -23,6 +23,7 @@ use crate::TransportExecutor;
 use async_std::prelude::FutureExt;
 use async_std::task;
 use async_std::task::JoinHandle;
+use zenoh_config::Priority;
 
 #[cfg(all(feature = "unstable", feature = "transport_compression"))]
 use std::convert::TryInto;
@@ -233,6 +234,8 @@ async fn tx_task(
                         bytes = &compression_aux_buff[..batch_size];
                     }
 
+                    let prio: Priority = (priority as u8).try_into().unwrap();
+                    link.set_priority(prio)?;
                     link.write_all(bytes).await?;
 
                     #[cfg(feature = "stats")]

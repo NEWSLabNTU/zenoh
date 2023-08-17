@@ -35,7 +35,7 @@ use zenoh_buffers::{
 use zenoh_cfg_properties::Properties;
 use zenoh_codec::{RCodec, WCodec, Zenoh060};
 use zenoh_protocol::{
-    core::{EndPoint, Locator},
+    core::{EndPoint, Locator, Priority},
     transport::TransportMessage,
 };
 use zenoh_result::{zerror, ZResult};
@@ -141,6 +141,7 @@ pub trait LinkUnicastTrait: Send + Sync {
     fn get_dst(&self) -> &Locator;
     fn is_reliable(&self) -> bool;
     fn is_streamed(&self) -> bool;
+    fn set_priority(&self, priority: Priority) -> ZResult<()>;
     async fn write(&self, buffer: &[u8]) -> ZResult<usize>;
     async fn write_all(&self, buffer: &[u8]) -> ZResult<()>;
     async fn read(&self, buffer: &mut [u8]) -> ZResult<usize>;
