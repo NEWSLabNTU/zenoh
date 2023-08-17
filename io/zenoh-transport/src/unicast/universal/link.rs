@@ -34,6 +34,7 @@ use std::{
     time::Duration,
 };
 use zenoh_buffers::ZSliceBuffer;
+use zenoh_config::Priority;
 use zenoh_core::zwrite;
 use zenoh_protocol::transport::{KeepAlive, TransportMessage};
 use zenoh_result::{zerror, ZResult};
@@ -195,7 +196,11 @@ async fn tx_task(
         match pipeline.pull().timeout(keep_alive).await {
             Ok(res) => match res {
                 Some((mut batch, priority)) => {
-                    link.send_batch(&mut batch).await?;
+                    link.send_batch(
+                        &mut batch,
+                        Some(Priority::try_from(priority as u8).unwrap()),
+                    )
+                    .await?;
 
                     #[cfg(feature = "stats")]
                     {
@@ -225,7 +230,7 @@ async fn tx_task(
     // Drain the transmission pipeline and write remaining bytes on the wire
     let mut batches = pipeline.drain();
     for (mut b, _) in batches.drain(..) {
-        link.send_batch(&mut b)
+        link.send_batch(&mut b, None)
             .timeout(keep_alive)
             .await
             .map_err(|_| zerror!("{}: flush failed after {} ms", link, keep_alive.as_millis()))??;

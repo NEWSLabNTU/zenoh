@@ -35,6 +35,7 @@ use zenoh_core::{zasynclock, zread, zwrite};
 use zenoh_link_commons::{
     LinkManagerUnicastTrait, LinkUnicast, LinkUnicastTrait, NewLinkChannelSender,
 };
+use zenoh_protocol::core::Priority;
 use zenoh_protocol::core::{EndPoint, Locator};
 use zenoh_result::{bail, zerror, ZResult};
 use zenoh_sync::Signal;
@@ -222,6 +223,11 @@ impl LinkUnicastTrait for LinkUnicastWs {
     #[inline(always)]
     fn is_streamed(&self) -> bool {
         false
+    }
+
+    fn set_priority(&self, _priority: Priority) -> ZResult<()> {
+        // no-op
+        Ok(())
     }
 }
 

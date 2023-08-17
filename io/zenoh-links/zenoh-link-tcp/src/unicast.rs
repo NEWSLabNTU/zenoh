@@ -17,7 +17,8 @@ use async_std::task;
 use async_trait::async_trait;
 use std::convert::TryInto;
 use std::fmt;
-use std::net::Shutdown;
+use std::net::{IpAddr, Shutdown};
+use std::os::fd::{AsRawFd, BorrowedFd};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
@@ -25,7 +26,7 @@ use zenoh_link_commons::{
     get_ip_interface_names, LinkManagerUnicastTrait, LinkUnicast, LinkUnicastTrait,
     ListenersUnicastIP, NewLinkChannelSender, BIND_INTERFACE,
 };
-use zenoh_protocol::core::{EndPoint, Locator};
+use zenoh_protocol::core::{EndPoint, Locator, Priority};
 use zenoh_result::{bail, zerror, Error as ZError, ZResult};
 use zenoh_sync::Signal;
 
@@ -155,6 +156,14 @@ impl LinkUnicastTrait for LinkUnicastTcp {
     #[inline(always)]
     fn is_streamed(&self) -> bool {
         true
+    }
+
+    fn set_priority(&self, priority: Priority) -> ZResult<()> {
+        use nix::sys::socket::sockopt::Priority as O_PRIORITY;
+        let fd = unsafe { BorrowedFd::borrow_raw(self.socket.as_raw_fd()) };
+        let priority = priority as u8 as i32;
+        nix::sys::socket::setsockopt(&fd, O_PRIORITY, &priority)?;
+        Ok(())
     }
 }
 

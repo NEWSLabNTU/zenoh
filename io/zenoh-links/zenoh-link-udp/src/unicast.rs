@@ -22,6 +22,8 @@ use async_std::task;
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::fmt;
+use std::net::IpAddr;
+use std::os::fd::{AsRawFd, BorrowedFd};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, Weak};
 use std::time::Duration;
@@ -30,7 +32,7 @@ use zenoh_link_commons::{
     get_ip_interface_names, ConstructibleLinkManagerUnicast, LinkManagerUnicastTrait, LinkUnicast,
     LinkUnicastTrait, ListenersUnicastIP, NewLinkChannelSender, BIND_INTERFACE,
 };
-use zenoh_protocol::core::{EndPoint, Locator};
+use zenoh_protocol::core::{EndPoint, Locator, Priority};
 use zenoh_result::{bail, zerror, Error as ZError, ZResult};
 use zenoh_sync::Mvar;
 use zenoh_sync::Signal;
@@ -59,6 +61,14 @@ impl LinkUnicastUdpConnected {
     }
 
     async fn close(&self) -> ZResult<()> {
+        Ok(())
+    }
+
+    fn set_priority(&self, priority: Priority) -> ZResult<()> {
+        use nix::sys::socket::sockopt::Priority as O_PRIORITY;
+        let fd = unsafe { BorrowedFd::borrow_raw(self.socket.as_raw_fd()) };
+        let priority = priority as u8 as i32;
+        nix::sys::socket::setsockopt(&fd, O_PRIORITY, &priority)?;
         Ok(())
     }
 }
@@ -112,6 +122,19 @@ impl LinkUnicastUdpUnconnected {
     async fn close(&self, src_addr: SocketAddr, dst_addr: SocketAddr) -> ZResult<()> {
         // Delete the link from the list of links
         zlock!(self.links).remove(&(src_addr, dst_addr));
+        Ok(())
+    }
+
+    fn set_priority(&self, priority: Priority) -> ZResult<()> {
+        use nix::sys::socket::sockopt::Priority as O_PRIORITY;
+
+        let socket = match self.socket.upgrade() {
+            Some(socket) => socket,
+            None => bail!("UDP listener has been dropped"),
+        };
+        let fd = unsafe { BorrowedFd::borrow_raw(socket.as_raw_fd()) };
+        let priority = priority as u8 as i32;
+        nix::sys::socket::setsockopt(&fd, O_PRIORITY, &priority)?;
         Ok(())
     }
 }
@@ -219,6 +242,13 @@ impl LinkUnicastTrait for LinkUnicastUdp {
     #[inline(always)]
     fn is_streamed(&self) -> bool {
         false
+    }
+
+    fn set_priority(&self, priority: Priority) -> ZResult<()> {
+        match &self.variant {
+            LinkUnicastUdpVariant::Connected(link) => link.set_priority(priority),
+            LinkUnicastUdpVariant::Unconnected(link) => link.set_priority(priority),
+        }
     }
 }
 

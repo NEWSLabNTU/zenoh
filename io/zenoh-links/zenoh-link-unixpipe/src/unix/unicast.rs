@@ -29,6 +29,7 @@ use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use std::os::unix::fs::OpenOptionsExt;
 use std::sync::Arc;
+use zenoh_config::Priority;
 use zenoh_core::{zasyncread, zasyncwrite};
 use zenoh_protocol::core::{EndPoint, Locator};
 
@@ -507,6 +508,11 @@ impl LinkUnicastTrait for UnicastPipe {
     #[inline(always)]
     fn is_streamed(&self) -> bool {
         true
+    }
+
+    fn set_priority(&self, _priority: Priority) -> ZResult<()> {
+        // TODO: no-op
+        Ok(())
     }
 }
 

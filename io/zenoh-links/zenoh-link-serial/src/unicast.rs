@@ -23,6 +23,7 @@ use std::fmt;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
+use zenoh_config::Priority;
 use zenoh_core::{zasynclock, zread, zwrite};
 use zenoh_link_commons::{
     ConstructibleLinkManagerUnicast, LinkManagerUnicastTrait, LinkUnicast, LinkUnicastTrait,
@@ -205,6 +206,11 @@ impl LinkUnicastTrait for LinkUnicastSerial {
     #[inline(always)]
     fn is_streamed(&self) -> bool {
         false
+    }
+
+    fn set_priority(&self, _priority: Priority) -> ZResult<()> {
+        // no-op
+        Ok(())
     }
 }
 

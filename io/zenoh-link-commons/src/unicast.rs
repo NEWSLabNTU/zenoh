@@ -19,7 +19,7 @@ use core::{
     hash::{Hash, Hasher},
     ops::Deref,
 };
-use zenoh_protocol::core::{EndPoint, Locator};
+use zenoh_protocol::core::{EndPoint, Locator, Priority};
 use zenoh_result::ZResult;
 
 pub type LinkManagerUnicast = Arc<dyn LinkManagerUnicastTrait>;
@@ -47,6 +47,7 @@ pub trait LinkUnicastTrait: Send + Sync {
     fn is_reliable(&self) -> bool;
     fn is_streamed(&self) -> bool;
     fn get_interface_names(&self) -> Vec<String>;
+    fn set_priority(&self, priority: Priority) -> ZResult<()>;
     async fn write(&self, buffer: &[u8]) -> ZResult<usize>;
     async fn write_all(&self, buffer: &[u8]) -> ZResult<()>;
     async fn read(&self, buffer: &mut [u8]) -> ZResult<usize>;

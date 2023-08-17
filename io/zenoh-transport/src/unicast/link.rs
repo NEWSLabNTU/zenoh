@@ -15,6 +15,7 @@ use crate::common::batch::{BatchConfig, Decode, Encode, Finalize, RBatch, WBatch
 use std::fmt;
 use std::sync::Arc;
 use zenoh_buffers::{BBuf, ZSlice, ZSliceBuffer};
+use zenoh_config::Priority;
 use zenoh_core::zcondfeat;
 use zenoh_link::{Link, LinkUnicast};
 use zenoh_protocol::transport::{BatchSize, Close, OpenAck, TransportMessage};
@@ -144,7 +145,11 @@ pub(crate) struct TransportLinkUnicastTx {
 }
 
 impl TransportLinkUnicastTx {
-    pub(crate) async fn send_batch(&mut self, batch: &mut WBatch) -> ZResult<()> {
+    pub(crate) async fn send_batch(
+        &mut self,
+        batch: &mut WBatch,
+        priority: Option<Priority>,
+    ) -> ZResult<()> {
         const ERR: &str = "Write error on link: ";
 
         // log::trace!("WBatch: {:?}", batch);
@@ -165,6 +170,10 @@ impl TransportLinkUnicastTx {
         // log::trace!("WBytes: {:02x?}", bytes);
 
         // Send the message on the link
+
+        if let Some(priority) = priority {
+            self.inner.link.set_priority(priority)?;
+        }
         self.inner.link.write_all(bytes).await?;
 
         Ok(())
@@ -177,7 +186,7 @@ impl TransportLinkUnicastTx {
         let mut batch = WBatch::new(self.inner.config.batch);
         batch.encode(msg).map_err(|_| zerror!("{ERR}{self}"))?;
         let len = batch.len() as usize;
-        self.send_batch(&mut batch).await?;
+        self.send_batch(&mut batch, None).await?;
         Ok(len)
     }
 }
