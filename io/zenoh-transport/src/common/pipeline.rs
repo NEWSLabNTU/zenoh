@@ -44,6 +44,7 @@ use zenoh_sync::{event, Notifier, Waiter};
 
 use super::{
     batch::{Encode, WBatch},
+    drr::DRR,
     priority::{TransportChannelTx, TransportPriorityTx},
 };
 use crate::common::batch::BatchConfig;
@@ -709,6 +710,10 @@ impl TransmissionPipeline {
             disabled: AtomicBool::new(false),
             congested: AtomicU8::new(0),
         });
+        let drr = {
+            let weights = vec![1; stage_out.len()];
+            DRR::new(&weights)
+        };
         let producer = TransmissionPipelineProducer {
             stage_in: stage_in.into_boxed_slice().into(),
             status: active.clone(),
@@ -719,6 +724,7 @@ impl TransmissionPipeline {
             stage_out: stage_out.into_boxed_slice(),
             n_out_r,
             status: active,
+            drr,
         };
 
         (producer, consumer)
@@ -829,14 +835,22 @@ pub(crate) struct TransmissionPipelineConsumer {
     stage_out: Box<[StageOut]>,
     n_out_r: Waiter,
     status: Arc<TransmissionPipelineStatus>,
+    drr: DRR,
 }
 
 impl TransmissionPipelineConsumer {
     pub(crate) async fn pull(&mut self) -> Option<(WBatch, Priority)> {
+        const ATTEMPTS: usize = 8;
+
         while !self.status.is_disabled() {
-            let mut backoff = MicroSeconds::MAX;
             // Calculate the backoff maximum
-            for (prio, queue) in self.stage_out.iter_mut().enumerate() {
+            let mut backoff = MicroSeconds::MAX;
+
+            for _ in 0..ATTEMPTS {
+                let next = self.drr.next();
+                let prio = next.slot();
+                let queue = &mut self.stage_out[prio];
+
                 match queue.try_pull() {
                     Pull::Some(batch) => {
                         let prio = Priority::try_from(prio as u8).unwrap();
