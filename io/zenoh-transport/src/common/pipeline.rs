@@ -15,6 +15,7 @@ use crate::common::batch::BatchConfig;
 //
 use super::{
     batch::{Encode, WBatch},
+    drr::DRR,
     priority::{TransportChannelTx, TransportPriorityTx},
 };
 use async_std::prelude::FutureExt;
@@ -573,6 +574,12 @@ impl TransmissionPipeline {
         }
 
         let active = Arc::new(AtomicBool::new(true));
+
+        let drr = {
+            let weights = vec![1; stage_out.len()];
+            DRR::new(&weights)
+        };
+
         let producer = TransmissionPipelineProducer {
             stage_in: stage_in.into_boxed_slice().into(),
             active: active.clone(),
@@ -581,6 +588,7 @@ impl TransmissionPipeline {
             stage_out: stage_out.into_boxed_slice(),
             n_out_r,
             active,
+            drr,
         };
 
         (producer, consumer)
@@ -642,33 +650,49 @@ pub(crate) struct TransmissionPipelineConsumer {
     stage_out: Box<[StageOut]>,
     n_out_r: Receiver<()>,
     active: Arc<AtomicBool>,
+    drr: DRR,
 }
 
 impl TransmissionPipelineConsumer {
     pub(crate) async fn pull(&mut self) -> Option<(WBatch, usize)> {
+        const ATTEMPTS: usize = 8;
+
         while self.active.load(Ordering::Relaxed) {
             // Calculate the backoff maximum
             let mut bo = NanoSeconds::MAX;
-            for (prio, queue) in self.stage_out.iter_mut().enumerate() {
+
+            for _ in 0..ATTEMPTS {
+                let next = self.drr.next();
+                let prio = next.slot();
+
+                let queue = &mut self.stage_out[prio];
+
                 match queue.try_pull() {
                     Pull::Some(batch) => {
+                        let ok = next.try_consume(1);
+                        debug_assert!(ok);
                         return Some((batch, prio));
                     }
                     Pull::Backoff(b) => {
                         if b < bo {
                             bo = b;
                         }
+                        next.give_up();
                     }
-                    Pull::None => {}
+                    Pull::None => {
+                        next.give_up();
+                    }
                 }
             }
 
             // Wait for the backoff to expire or for a new message
-            let _ = self
-                .n_out_r
-                .recv_async()
-                .timeout(Duration::from_nanos(bo as u64))
-                .await;
+            if bo != NanoSeconds::MAX {
+                let _ = self
+                    .n_out_r
+                    .recv_async()
+                    .timeout(Duration::from_nanos(bo as u64))
+                    .await;
+            }
         }
         None
     }
