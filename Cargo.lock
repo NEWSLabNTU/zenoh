@@ -2234,6 +2234,7 @@ dependencies = [
  "cfg-if 1.0.0",
  "cfg_aliases 0.2.1",
  "libc",
+ "memoffset 0.9.1",
 ]
 
 [[package]]
@@ -5332,6 +5333,7 @@ name = "zenoh-link-tcp"
 version = "1.0.4"
 dependencies = [
  "async-trait",
+ "nix 0.29.0",
  "socket2 0.5.7",
  "tokio",
  "tokio-util",
@@ -5376,6 +5378,7 @@ name = "zenoh-link-udp"
 version = "1.0.4"
 dependencies = [
  "async-trait",
+ "nix 0.29.0",
  "socket2 0.5.7",
  "tokio",
  "tokio-util",

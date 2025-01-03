@@ -22,7 +22,7 @@ use std::net::SocketAddr;
 use async_trait::async_trait;
 use serde::Serialize;
 use zenoh_protocol::{
-    core::{EndPoint, Locator},
+    core::{EndPoint, Locator, Priority},
     transport::BatchSize,
 };
 use zenoh_result::ZResult;
@@ -54,6 +54,7 @@ pub trait LinkUnicastTrait: Send + Sync {
     fn is_streamed(&self) -> bool;
     fn get_interface_names(&self) -> Vec<String>;
     fn get_auth_id(&self) -> &LinkAuthId;
+    fn set_priority(&self, priority: Priority) -> ZResult<()>;
     async fn write(&self, buffer: &[u8]) -> ZResult<usize>;
     async fn write_all(&self, buffer: &[u8]) -> ZResult<()>;
     async fn read(&self, buffer: &mut [u8]) -> ZResult<usize>;

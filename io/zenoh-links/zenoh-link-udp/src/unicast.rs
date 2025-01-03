@@ -15,6 +15,7 @@ use std::{
     collections::HashMap,
     fmt,
     net::{Ipv4Addr, Ipv6Addr, SocketAddr},
+    os::fd::{AsRawFd, BorrowedFd},
     sync::{Arc, Mutex, Weak},
     time::Duration,
 };
@@ -28,7 +29,7 @@ use zenoh_link_commons::{
     LinkUnicast, LinkUnicastTrait, ListenersUnicastIP, NewLinkChannelSender, BIND_INTERFACE,
 };
 use zenoh_protocol::{
-    core::{EndPoint, Locator},
+    core::{EndPoint, Locator, Priority},
     transport::BatchSize,
 };
 use zenoh_result::{bail, zerror, Error as ZError, ZResult};
@@ -228,6 +229,23 @@ impl LinkUnicastTrait for LinkUnicastUdp {
     #[inline(always)]
     fn get_auth_id(&self) -> &LinkAuthId {
         &LinkAuthId::NONE
+    }
+
+    fn set_priority(&self, priority: Priority) -> ZResult<()> {
+        use nix::sys::socket::sockopt::Priority as O_PRIORITY;
+
+        let socket = match &self.variant {
+            LinkUnicastUdpVariant::Connected(v) => v.socket.clone(),
+            LinkUnicastUdpVariant::Unconnected(v) => match v.socket.upgrade() {
+                Some(socket) => socket,
+                None => bail!("UDP listener has been dropped"),
+            },
+        };
+
+        let fd = unsafe { BorrowedFd::borrow_raw(socket.as_raw_fd()) };
+        let priority = priority as u8 as i32;
+        nix::sys::socket::setsockopt(&fd, O_PRIORITY, &priority)?;
+        Ok(())
     }
 }
 

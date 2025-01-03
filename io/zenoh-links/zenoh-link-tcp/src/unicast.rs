@@ -11,7 +11,15 @@
 // Contributors:
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
-use std::{cell::UnsafeCell, convert::TryInto, fmt, net::SocketAddr, sync::Arc, time::Duration};
+use std::{
+    cell::UnsafeCell,
+    convert::TryInto,
+    fmt,
+    net::SocketAddr,
+    os::fd::{AsRawFd, BorrowedFd},
+    sync::Arc,
+    time::Duration,
+};
 
 use async_trait::async_trait;
 use tokio::{
@@ -24,7 +32,7 @@ use zenoh_link_commons::{
     ListenersUnicastIP, NewLinkChannelSender, BIND_INTERFACE,
 };
 use zenoh_protocol::{
-    core::{EndPoint, Locator},
+    core::{EndPoint, Locator, Priority},
     transport::BatchSize,
 };
 use zenoh_result::{bail, zerror, Error as ZError, ZResult};
@@ -195,6 +203,15 @@ impl LinkUnicastTrait for LinkUnicastTcp {
     #[inline(always)]
     fn get_auth_id(&self) -> &LinkAuthId {
         &LinkAuthId::NONE
+    }
+
+    fn set_priority(&self, priority: Priority) -> ZResult<()> {
+        use nix::sys::socket::sockopt::Priority as O_PRIORITY;
+
+        let fd = unsafe { BorrowedFd::borrow_raw(self.get_mut_socket().as_raw_fd()) };
+        let priority = priority as u8 as i32;
+        nix::sys::socket::setsockopt(&fd, O_PRIORITY, &priority)?;
+        Ok(())
     }
 }
 

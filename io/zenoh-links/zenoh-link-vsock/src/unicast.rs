@@ -31,7 +31,7 @@ use zenoh_link_commons::{
     LinkAuthId, LinkManagerUnicastTrait, LinkUnicast, LinkUnicastTrait, NewLinkChannelSender,
 };
 use zenoh_protocol::{
-    core::{endpoint::Address, EndPoint, Locator},
+    core::{endpoint::Address, EndPoint, Locator, Priority},
     transport::BatchSize,
 };
 use zenoh_result::{bail, zerror, ZResult};
@@ -193,6 +193,11 @@ impl LinkUnicastTrait for LinkUnicastVsock {
     #[inline(always)]
     fn get_auth_id(&self) -> &LinkAuthId {
         &LinkAuthId::NONE
+    }
+
+    fn set_priority(&self, _priority: Priority) -> ZResult<()> {
+        // no-op
+        Ok(())
     }
 }
 

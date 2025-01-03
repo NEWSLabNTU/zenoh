@@ -33,7 +33,7 @@ use zenoh_link_commons::{
     ListenersUnicastIP, NewLinkChannelSender,
 };
 use zenoh_protocol::{
-    core::{EndPoint, Locator},
+    core::{EndPoint, Locator, Priority},
     transport::BatchSize,
 };
 use zenoh_result::{bail, zerror, ZResult};
@@ -185,6 +185,11 @@ impl LinkUnicastTrait for LinkUnicastQuic {
     #[inline(always)]
     fn get_auth_id(&self) -> &LinkAuthId {
         &self.auth_identifier
+    }
+
+    fn set_priority(&self, _priority: Priority) -> ZResult<()> {
+        // no-op
+        Ok(())
     }
 }
 
