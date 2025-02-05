@@ -361,6 +361,11 @@ validated_struct::validator! {
                 /// The timeout to wait for incoming interests declarations.
                 timeout: Option<u64>,
             },
+
+            pub geolocation: #[derive(Default)]
+            GeoLocatoinConf {
+                enabled: bool,
+            }
         },
 
         /// The declarations aggregation strategy.

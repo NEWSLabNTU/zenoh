@@ -34,7 +34,10 @@ use zenoh_transport::unicast::TransportUnicast;
 
 use crate::net::{
     codec::Zenoh080Routing,
-    protocol::linkstate::{LinkState, LinkStateList},
+    protocol::{
+        geolocation::GeoLocation,
+        linkstate::{LinkState, LinkStateList},
+    },
     routing::dispatcher::tables::NodeId,
     runtime::{Runtime, WeakRuntime},
 };
@@ -269,6 +272,10 @@ impl Network {
             },
             links,
         }
+    }
+
+    fn make_geo_location(&self, idx: NodeIndex, details: &Details) -> Option<GeoLocation> {
+        todo!();
     }
 
     fn make_msg(&self, idxs: &Vec<(NodeIndex, Details)>) -> Result<NetworkMessage, DidntWrite> {
