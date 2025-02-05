@@ -21,6 +21,7 @@ use std::{
     any::Any,
     collections::{HashMap, HashSet},
     sync::{atomic::AtomicU32, Arc},
+    time::Duration,
 };
 
 use token::{token_remove_node, undeclare_simple_token};
@@ -31,7 +32,7 @@ use zenoh_protocol::{
     network::{
         declare::{queryable::ext::QueryableInfoType, QueryableId, SubscriberId},
         interest::InterestId,
-        oam::id::OAM_LINKSTATE,
+        oam::id::{OAM_GEOLOCATION, OAM_LINKSTATE},
         Oam,
     },
 };
@@ -54,10 +55,10 @@ use super::{
 };
 use crate::net::{
     codec::Zenoh080Routing,
-    protocol::linkstate::LinkStateList,
+    protocol::{geolocation::GeoLocation, linkstate::LinkStateList},
     routing::{
         dispatcher::{face::Face, interests::RemoteInterest},
-        hat::TREES_COMPUTATION_DELAY_MS,
+        hat::{GPSD_CLIENT_DELAY_MS, TREES_COMPUTATION_DELAY_MS},
     },
     runtime::Runtime,
 };
@@ -124,10 +125,7 @@ impl TreesComputationWorker {
         let (tx, rx) = flume::bounded::<Arc<TablesLock>>(1);
         let task = TerminatableTask::spawn_abortable(zenoh_runtime::ZRuntime::Net, async move {
             loop {
-                tokio::time::sleep(std::time::Duration::from_millis(
-                    *TREES_COMPUTATION_DELAY_MS,
-                ))
-                .await;
+                tokio::time::sleep(Duration::from_millis(*TREES_COMPUTATION_DELAY_MS)).await;
                 if let Ok(tables_ref) = rx.recv_async().await {
                     let mut tables = zwrite!(tables_ref.tables);
 
@@ -151,12 +149,44 @@ impl TreesComputationWorker {
     }
 }
 
+struct GpsdClient {
+    rx: tokio::sync::watch::Receiver<Option<gpsd_client::GPSData>>,
+    _task: TerminatableTask,
+}
+
+impl GpsdClient {
+    fn new() -> Result<Self, gpsd_client::GPSError> {
+        let mut client = gpsd_client::GPS::connect()?;
+        let (tx, rx) = tokio::sync::watch::channel(None);
+
+        let task = TerminatableTask::spawn_abortable(zenoh_runtime::ZRuntime::Net, async move {
+            loop {
+                tokio::time::sleep(Duration::from_millis(*GPSD_CLIENT_DELAY_MS)).await;
+                let data = match client.current_data() {
+                    Ok(data) => Some(data),
+                    Err(err) => {
+                        tracing::error!("fail to get data from GPSD: {err}");
+                        None
+                    }
+                };
+
+                if tx.send(data).is_err() {
+                    break;
+                }
+            }
+        });
+
+        Ok(Self { rx, _task: task })
+    }
+}
+
 struct HatTables {
     linkstatepeer_subs: HashSet<Arc<Resource>>,
     linkstatepeer_tokens: HashSet<Arc<Resource>>,
     linkstatepeer_qabls: HashSet<Arc<Resource>>,
     linkstatepeers_net: Option<Network>,
     linkstatepeers_trees_worker: TreesComputationWorker,
+    gpsd_client: Option<GpsdClient>,
 }
 
 impl HatTables {
@@ -167,12 +197,18 @@ impl HatTables {
             linkstatepeer_qabls: HashSet::new(),
             linkstatepeers_net: None,
             linkstatepeers_trees_worker: TreesComputationWorker::new(),
+            gpsd_client: None,
         }
     }
 
     fn schedule_compute_trees(&mut self, tables_ref: Arc<TablesLock>) {
         tracing::trace!("Schedule trees computation");
         let _ = self.linkstatepeers_trees_worker.tx.try_send(tables_ref);
+    }
+
+    fn get_gps_data(&self) -> Option<gpsd_client::GPSData> {
+        let gpsd_client = self.gpsd_client.as_ref()?;
+        gpsd_client.rx.borrow().as_ref().cloned()
     }
 }
 
@@ -199,19 +235,37 @@ impl HatBaseTrait for HatCode {
             unwrap_or_default!(config.routing().peer().mode()) == *"linkstate";
         let router_peers_failover_brokering =
             unwrap_or_default!(config.routing().router().peers_failover_brokering());
+
+        let enable_geolocation = *config.routing().geolocation().enabled();
         drop(config_guard);
 
-        hat_mut!(tables).linkstatepeers_net = Some(Network::new(
-            "[Peers network]".to_string(),
-            tables.zid,
-            runtime,
-            peer_full_linkstate,
-            router_peers_failover_brokering,
-            gossip,
-            gossip_multihop,
-            gossip_target,
-            autoconnect,
-        ));
+        let gpsd_client = if enable_geolocation {
+            match GpsdClient::new() {
+                Ok(client) => Some(client),
+                Err(err) => {
+                    tracing::error!("unable to start GPSD client: {err}");
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
+        {
+            let tables_mut = hat_mut!(tables);
+            tables_mut.gpsd_client = gpsd_client;
+            tables_mut.linkstatepeers_net = Some(Network::new(
+                "[Peers network]".to_string(),
+                tables.zid,
+                runtime,
+                peer_full_linkstate,
+                router_peers_failover_brokering,
+                gossip,
+                gossip_multihop,
+                gossip_target,
+                autoconnect,
+            ));
+        }
         Ok(())
     }
 
@@ -386,33 +440,56 @@ impl HatBaseTrait for HatCode {
         transport: &TransportUnicast,
         send_declare: &mut SendDeclare,
     ) -> ZResult<()> {
+        use zenoh_buffers::reader::HasReader;
+        use zenoh_codec::RCodec;
+
         if oam.id == OAM_LINKSTATE {
-            if let ZExtBody::ZBuf(buf) = oam.body {
-                if let Ok(zid) = transport.get_zid() {
-                    use zenoh_buffers::reader::HasReader;
-                    use zenoh_codec::RCodec;
-                    let codec = Zenoh080Routing::new();
-                    let mut reader = buf.reader();
-                    let Ok(list): Result<LinkStateList, _> = codec.read(&mut reader) else {
-                        bail!("failed to decode link state");
-                    };
+            let ZExtBody::ZBuf(buf) = oam.body else {
+                return Ok(());
+            };
+            let Ok(zid) = transport.get_zid() else {
+                return Ok(());
+            };
 
-                    let whatami = transport.get_whatami()?;
-                    if whatami != WhatAmI::Client {
-                        if let Some(net) = hat_mut!(tables).linkstatepeers_net.as_mut() {
-                            let changes = net.link_states(list.link_states, zid);
+            let codec = Zenoh080Routing::new();
+            let mut reader = buf.reader();
+            let Ok(list): Result<LinkStateList, _> = codec.read(&mut reader) else {
+                bail!("failed to decode link state");
+            };
 
-                            for (_, removed_node) in changes.removed_nodes {
-                                pubsub_remove_node(tables, &removed_node.zid, send_declare);
-                                queries_remove_node(tables, &removed_node.zid, send_declare);
-                                token_remove_node(tables, &removed_node.zid, send_declare);
-                            }
+            let whatami = transport.get_whatami()?;
+            if whatami == WhatAmI::Client {
+                return Ok(());
+            };
+            let Some(net) = hat_mut!(tables).linkstatepeers_net.as_mut() else {
+                return Ok(());
+            };
 
-                            hat_mut!(tables).schedule_compute_trees(tables_ref.clone());
-                        }
-                    };
-                }
+            let changes = net.link_states(list.link_states, zid);
+
+            for (_, removed_node) in changes.removed_nodes {
+                pubsub_remove_node(tables, &removed_node.zid, send_declare);
+                queries_remove_node(tables, &removed_node.zid, send_declare);
+                token_remove_node(tables, &removed_node.zid, send_declare);
             }
+
+            hat_mut!(tables).schedule_compute_trees(tables_ref.clone());
+        } else if oam.id == OAM_GEOLOCATION {
+            let ZExtBody::ZBuf(buf) = oam.body else {
+                return Ok(());
+            };
+            let Ok(zid) = transport.get_zid() else {
+                return Ok(());
+            };
+
+            let codec = Zenoh080Routing::new();
+            let mut reader = buf.reader();
+
+            let Ok(geo_loc): Result<GeoLocation, _> = codec.read(&mut reader) else {
+                bail!("failed to decode geolocation");
+            };
+
+            todo!();
         }
 
         Ok(())

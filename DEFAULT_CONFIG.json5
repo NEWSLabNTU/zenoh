@@ -202,6 +202,11 @@
       /// leading to potential loss of messages, queries or liveliness tokens.
       timeout: 10000,
     },
+    /// The geolocation configuration.
+    geolocation: {
+      /// Whether the geolocation feature is enabled.
+      enabled: true,
+    },
   },
 
   //  /// Overwrite QoS options for Zenoh messages by key expression (ignores Zenoh API QoS config for overwritten values)
