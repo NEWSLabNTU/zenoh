@@ -11,6 +11,7 @@
 // Contributors:
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
+pub(crate) mod geolocation;
 pub(crate) mod linkstate;
 
 #[derive(Clone, Copy)]

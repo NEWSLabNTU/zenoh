@@ -25,6 +25,7 @@ pub mod id {
     use super::OamId;
 
     pub const OAM_LINKSTATE: OamId = 0x0001;
+    pub const OAM_GEOLOCATION: OamId = 0x0002;
 }
 
 /// ```text

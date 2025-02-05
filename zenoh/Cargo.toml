@@ -109,6 +109,7 @@ zenoh-util = { workspace = true }
 zenoh-runtime = { workspace = true }
 zenoh-task = { workspace = true }
 once_cell = { workspace = true }
+ordered-float.workspace = true
 
 [dev-dependencies]
 tokio = { workspace = true }
