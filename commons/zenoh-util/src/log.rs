@@ -57,19 +57,109 @@ where
 }
 
 fn init_env_filter(env_filter: EnvFilter) {
-    let fmt_layer = tracing_subscriber::fmt::layer()
+    let fmt_layer = init_fmt_layer();
+    let registry = tracing_subscriber::registry()
+        .with(env_filter)
+        .with(fmt_layer);
+
+    #[cfg(feature = "opentelemetry")]
+    {
+        match init_otlp_layer() {
+            Ok(Some(otlp_layer)) => {
+                registry.with(otlp_layer).init();
+                eprintln!("Zenoh logging initialized (JSON + OpenTelemetry mode)");
+                return;
+            }
+            Ok(None) => {
+                registry.init();
+                eprintln!("Zenoh logging initialized (JSON mode - no OTLP endpoint configured)");
+                return;
+            }
+            Err(err) => {
+                eprintln!("Failed to initialize OpenTelemetry layer: {}", err);
+                registry.init();
+                eprintln!("Zenoh logging initialized (JSON mode - OpenTelemetry fallback)");
+                return;
+            }
+        };
+    }
+
+    #[cfg(not(feature = "opentelemetry"))]
+    {
+        registry.init();
+        eprintln!("Zenoh logging initialized (JSON mode)");
+    }
+}
+
+fn init_fmt_layer<S>() -> impl tracing_subscriber::Layer<S>
+where
+    S: tracing::Subscriber + for<'a> LookupSpan<'a>,
+{
+    tracing_subscriber::fmt::layer()
         .with_timer(tracing_subscriber::fmt::time::UtcTime::rfc_3339())
         .with_thread_ids(true)
         .with_thread_names(true)
         .with_level(true)
         .with_target(true)
-        .json(); // Add JSON formatting
+        .json()
+}
 
-    // Initialize with JSON logging for distributed log collection
-    tracing_subscriber::registry()
-        .with(env_filter)
-        .with(fmt_layer)
-        .init();
+#[cfg(feature = "opentelemetry")]
+fn init_otlp_layer<S>() -> Result<
+    Option<tracing_opentelemetry::OpenTelemetryLayer<S, opentelemetry_sdk::trace::SdkTracer>>,
+    Box<dyn std::error::Error>,
+>
+where
+    S: tracing::Subscriber + for<'span> LookupSpan<'span>,
+{
+    use opentelemetry::trace::TracerProvider as _;
+    use opentelemetry::KeyValue;
+    use opentelemetry_otlp::SpanExporter;
+    use opentelemetry_otlp::WithExportConfig;
+    use opentelemetry_sdk::{trace as sdktrace, Resource};
+
+    let endpoint = match std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT") {
+        Ok(endpoint) => endpoint,
+        Err(_) => {
+            // OTEL_EXPORTER_OTLP_ENDPOINT not set - this is expected for local-only mode
+            return Ok(None);
+        }
+    };
+
+    // Create OTLP exporter
+    let otlp_exporter = SpanExporter::builder()
+        .with_tonic()
+        .with_endpoint(endpoint)
+        .build()?;
+
+    // Get peer ID and experiment ID from environment
+    let peer_id = std::env::var("PEER_ID").unwrap_or_else(|_| "unknown".to_string());
+    let experiment_id = std::env::var("EXPERIMENT_ID").unwrap_or_else(|_| "unknown".to_string());
+
+    // Create resource with service metadata
+    let resource = Resource::builder()
+        .with_service_name("zenoh-peer")
+        .with_attribute(KeyValue::new("service.version", env!("CARGO_PKG_VERSION")))
+        .with_attribute(KeyValue::new("peer.id", peer_id))
+        .with_attribute(KeyValue::new("experiment.id", experiment_id))
+        .build();
+
+    // Create tracer provider
+    let provider = sdktrace::SdkTracerProvider::builder()
+        .with_simple_exporter(otlp_exporter)
+        .with_resource(resource)
+        .build();
+
+    // Set as global provider (optional but useful for propagation)
+    opentelemetry::global::set_tracer_provider(provider.clone());
+
+    // Get tracer
+    let tracer = provider.tracer("zenoh");
+
+    // Create layer
+    let layer = tracing_opentelemetry::layer().with_tracer(tracer);
+
+    Ok(Some(layer))
 }
 
 pub struct LogRecord {
