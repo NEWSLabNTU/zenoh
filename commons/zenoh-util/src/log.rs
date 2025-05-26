@@ -17,6 +17,7 @@ use tracing::{field::Field, span, Event, Metadata, Subscriber};
 use tracing_subscriber::{
     layer::{Context, SubscriberExt},
     registry::LookupSpan,
+    util::SubscriberInitExt,
     EnvFilter,
 };
 
@@ -56,15 +57,19 @@ where
 }
 
 fn init_env_filter(env_filter: EnvFilter) {
-    let subscriber = tracing_subscriber::fmt()
-        .with_env_filter(env_filter)
+    let fmt_layer = tracing_subscriber::fmt::layer()
+        .with_timer(tracing_subscriber::fmt::time::UtcTime::rfc_3339())
         .with_thread_ids(true)
         .with_thread_names(true)
         .with_level(true)
-        .with_target(true);
+        .with_target(true)
+        .json(); // Add JSON formatting
 
-    let subscriber = subscriber.finish();
-    let _ = tracing::subscriber::set_global_default(subscriber);
+    // Initialize with JSON logging for distributed log collection
+    tracing_subscriber::registry()
+        .with(env_filter)
+        .with(fmt_layer)
+        .init();
 }
 
 pub struct LogRecord {
