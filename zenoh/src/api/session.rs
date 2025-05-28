@@ -692,17 +692,20 @@ impl Session {
                 aggregated_publishers,
                 publisher_qos.into(),
             ));
+            let id = SESSION_ID_COUNTER.fetch_add(1, Ordering::SeqCst);
             let session = Session(Arc::new(SessionInner {
                 weak_counter: Mutex::new(0),
                 runtime: runtime.clone(),
                 state,
-                id: SESSION_ID_COUNTER.fetch_add(1, Ordering::SeqCst),
+                id,
                 owns_runtime,
                 task_controller: TaskController::default(),
                 namespace: namespace.clone(),
                 #[cfg(feature = "unstable")]
                 face_id: OnceCell::new(),
             }));
+
+            info!("Start Session: {id}");
 
             runtime.new_handler(Arc::new(admin::Handler::new(session.downgrade())));
 
