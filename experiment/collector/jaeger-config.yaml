@@ -1,0 +1,35 @@
+# Jaeger configuration for Zenoh experiments
+# This is used when running Jaeger with custom settings
+
+# Collector configuration
+collector:
+  otlp:
+    enabled: true
+    grpc:
+      host-port: "0.0.0.0:14250"
+    http:
+      host-port: "0.0.0.0:14268"
+
+# Storage configuration
+span-storage:
+  type: memory
+  # For production, use badger or elasticsearch
+  # badger:
+  #   directory-key: /data/jaeger/key
+  #   directory-value: /data/jaeger/value
+
+# Query service configuration
+query:
+  base-path: /
+  static-files: /go/jaeger-ui-build/build/
+
+# Sampling configuration
+sampling:
+  strategies_file: /etc/jaeger/sampling_strategies.json
+
+# Processor configuration
+processor:
+  jaeger-binary:
+    server-queue-size: 1000
+    server-max-packet-size: 65000
+    workers: 10

@@ -1,0 +1,36 @@
+[project]
+name = "zenoh-experiment"
+version = "0.1.0"
+description = "Zenoh experiment framework with OpenTelemetry integration"
+authors = [
+    { name = "aeon", email = "jerry73204@gmail.com" }
+]
+dependencies = [
+    "pydantic>=2.11.5",
+    "pyyaml>=6.0.2",
+    "rich>=14.0.0",
+]
+readme = "README.md"
+requires-python = ">= 3.10"
+
+[project.scripts]
+zenoh-pub = "pub.pub:main"
+zenoh-sub = "sub.sub:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.rye]
+managed = true
+dev-dependencies = []
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = [
+  "config",
+  "pub",
+  "sub",
+]

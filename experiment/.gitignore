@@ -1,0 +1,24 @@
+# Environment files
+.env
+
+# Generated files
+*.log
+*.metadata.json
+experiment-summary.json
+
+# Docker volumes
+grafana-storage/
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# python
+*.pyc
+*.pyo
+__pycache__/
