@@ -25,3 +25,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Follow Rust naming conventions. For example, id() is preferred over get_id().
 - In Rust, it's preferred to initialize struct fields first and then construct the struct. It avoids mutable initial structs.
 - Always build and test the Rust code whenever modification work is made on Rust.
+
+## Workflow Tips
+- When tasks are completed, notify GNU Screen with a bell: `printf '\a'; echo "[Task Complete] <task description>"`.
