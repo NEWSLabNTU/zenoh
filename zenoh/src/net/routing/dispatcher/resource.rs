@@ -662,6 +662,10 @@ impl Resource {
         if face.is_local {
             return res.expr().to_string().into();
         }
+        if !face.maps_keys {
+            // Use a mapping the remote declared (it reached us), never declare one.
+            return res.get_best_key("", face.id).to_owned();
+        }
 
         let (nonwild_prefix, wildsuffix) = Resource::nonwild_prefix(res);
         match nonwild_prefix {

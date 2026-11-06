@@ -282,6 +282,17 @@ impl Gateway {
         #[cfg(feature = "stats")]
         let stats = transport.get_stats().ok();
 
+        // Declarations sent on a transport with no reliable link can be lost, so key
+        // expressions are not mapped to ids on it.
+        let maps_keys = {
+            let inspector = zenoh_link::LocatorInspector::default();
+            let links = transport.get_links().unwrap_or_default();
+            links.is_empty()
+                || links
+                    .iter()
+                    .any(|link| inspector.is_reliable(&link.dst).unwrap_or(true))
+        };
+
         let newface = tables
             .data
             .faces
@@ -296,6 +307,7 @@ impl Gateway {
                     tables.hats.map_ref(|hat| hat.new_face()),
                 )
                 .whatami(whatami)
+                .maps_keys(maps_keys)
                 .ingress_interceptors(ingress.clone());
 
                 #[cfg(feature = "stats")]
