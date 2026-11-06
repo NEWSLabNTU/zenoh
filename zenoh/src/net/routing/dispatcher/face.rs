@@ -138,6 +138,11 @@ pub struct FaceState {
     pub(crate) hats: RegionMap<Box<dyn Any + Send + Sync>>,
     pub(crate) task_controller: TaskController,
     pub(crate) is_local: bool,
+    /// Whether key expressions sent on this face may be mapped to numeric ids
+    /// (`DeclareKeyExpr`). False when the transport runs only on links that may lose
+    /// messages: a lost declaration would make the remote reject every later message that
+    /// refers to the id, for the rest of the session.
+    pub(crate) maps_keys: bool,
     #[cfg(feature = "stats")]
     pub(crate) stats: Option<zenoh_stats::TransportStats>,
 }
@@ -172,6 +177,7 @@ impl FaceStateBuilder {
             hats,
             task_controller: TaskController::default(),
             is_local: false,
+            maps_keys: true,
             #[cfg(feature = "stats")]
             stats: None,
         })
@@ -192,6 +198,11 @@ impl FaceStateBuilder {
 
     pub(crate) fn multicast_group(mut self, mcast_group: TransportMulticast) -> Self {
         self.0.mcast_group = Some(mcast_group);
+        self
+    }
+
+    pub(crate) fn maps_keys(mut self, maps_keys: bool) -> Self {
+        self.0.maps_keys = maps_keys;
         self
     }
 
