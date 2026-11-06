@@ -23,7 +23,7 @@ use std::{
     sync::{atomic::AtomicBool, Arc},
 };
 
-use futures::FutureExt;
+use futures::{stream::FuturesUnordered, FutureExt, StreamExt};
 use quinn::{
     crypto::rustls::{QuicClientConfig, QuicServerConfig},
     EndpointConfig,
@@ -378,6 +378,22 @@ impl<F: AcceptorCallback> QuicServer<F> {
             None
         };
 
+        // A handshake must finish within this time; the acceptor runs handshakes
+        // concurrently, so a client that stalls does not hold up others.
+        let handshake_timeout = std::time::Duration::from_millis(
+            epconf
+                .get(crate::tls::config::TLS_HANDSHAKE_TIMEOUT_MS)
+                .map(str::parse)
+                .transpose()
+                .map_err(|e| {
+                    zerror!(
+                        "Invalid {}: {e}",
+                        crate::tls::config::TLS_HANDSHAKE_TIMEOUT_MS
+                    )
+                })?
+                .unwrap_or(crate::tls::config::TLS_HANDSHAKE_TIMEOUT_MS_DEFAULT),
+        );
+
         let quic_config: QuicServerConfig = server_crypto
             .server_config
             .try_into()
@@ -433,6 +449,7 @@ impl<F: AcceptorCallback> QuicServer<F> {
                 quic_endpoint,
                 tls_close_link_on_expiration: server_crypto.tls_close_link_on_expiration,
                 is_streamed,
+                handshake_timeout,
                 inner: acceptor_params,
             },
             locator,
@@ -657,6 +674,7 @@ pub struct QuicAcceptor<F: AcceptorCallback> {
     quic_endpoint: quinn::Endpoint,
     tls_close_link_on_expiration: bool,
     is_streamed: bool,
+    handshake_timeout: std::time::Duration,
     inner: QuicAcceptorParams<F>,
 }
 
@@ -669,6 +687,7 @@ impl<F: AcceptorCallback> fmt::Debug for QuicAcceptor<F> {
                 &self.tls_close_link_on_expiration,
             )
             .field("is_streamed", &self.is_streamed)
+            .field("handshake_timeout", &self.handshake_timeout)
             .field("inner", &self.inner)
             .finish()
     }
@@ -676,18 +695,6 @@ impl<F: AcceptorCallback> fmt::Debug for QuicAcceptor<F> {
 
 impl<F: AcceptorCallback> QuicAcceptor<F> {
     pub async fn accept_task(self) -> ZResult<()> {
-        async fn accept_connection(acceptor: quinn::Accept<'_>) -> ZResult<quinn::Connection> {
-            let qc = acceptor
-                .await
-                .ok_or_else(|| zerror!("Can not accept QUIC connections: acceptor closed"))?;
-
-            let conn = qc
-                .await
-                .map_err(|e| zerror!("QUIC acceptor failed: {:?}", e))?;
-
-            Ok(conn)
-        }
-
         let src_addr = self
             .quic_endpoint
             .local_addr()
@@ -695,40 +702,59 @@ impl<F: AcceptorCallback> QuicAcceptor<F> {
 
         tracing::trace!("Ready to accept QUIC connections on: {:?}", src_addr);
 
+        // Handshakes in progress. Each one runs alongside new accepts, so a client whose
+        // handshake stalls (for example on a lossy link) does not delay any other client.
+        let mut handshakes = FuturesUnordered::new();
+
         loop {
             tokio::select! {
                 _ = self.inner.token.cancelled() => break,
 
-                res = accept_connection(self.quic_endpoint.accept()) => {
+                incoming = self.quic_endpoint.accept() => {
+                    let Some(incoming) = incoming else {
+                        tracing::debug!("QUIC acceptor closed");
+                        break;
+                    };
+                    handshakes.push(self.establish(incoming, src_addr));
+                }
+
+                Some(res) = handshakes.next(), if !handshakes.is_empty() => {
                     match res {
-                        Ok(quic_conn) => {
-                            let link = match self.handle_accepted_connection(quic_conn, &src_addr).await {
-                                Ok(link) => link,
-                                Err(e) => {
-                                    tracing::error!("Cannot accept QUIC connection: {e:?}");
-                                    continue;
-                                }
-                            };
+                        Ok(link) => {
                             // Communicate the new link to the initial transport manager
                             if let Err(e) = self.inner.manager.send_async(link).await {
                                 tracing::error!("{}-{}: {}", file!(), line!(), e)
                             }
                         }
-                        Err(e) => {
-                            tracing::warn!("{} Hint: increase the system open file limit.", e);
-                            // Throttle the accept loop upon an error
-                            // NOTE: This might be due to various factors. However, the most common case is that
-                            //       the process has reached the maximum number of open files in the system. On
-                            //       Linux systems this limit can be changed by using the "ulimit" command line
-                            //       tool. In case of systemd-based systems, this can be changed by using the
-                            //       "sysctl" command line tool.
-                            tokio::time::sleep(self.inner.throttle_time).await;
-                        }
+                        Err(e) => tracing::warn!("Cannot accept QUIC connection: {e:?}"),
                     }
                 }
             }
         }
         Ok(())
+    }
+
+    /// Completes the handshake of an incoming connection and makes its link, within the
+    /// handshake timeout.
+    async fn establish(
+        &self,
+        incoming: quinn::Incoming,
+        src_addr: SocketAddr,
+    ) -> ZResult<LinkUnicast> {
+        let remote = incoming.remote_address();
+        tokio::time::timeout(self.handshake_timeout, async {
+            let conn = incoming
+                .await
+                .map_err(|e| zerror!("QUIC handshake with {remote} failed: {e:?}"))?;
+            self.handle_accepted_connection(conn, &src_addr).await
+        })
+        .await
+        .map_err(|_| {
+            zerror!(
+                "QUIC handshake with {remote} timed out after {:?}",
+                self.handshake_timeout
+            )
+        })?
     }
 
     /// Handles an accepted [`quinn::Connection`], returning a link made by the provided callback.
