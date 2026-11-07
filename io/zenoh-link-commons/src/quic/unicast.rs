@@ -367,7 +367,7 @@ impl<F: AcceptorCallback> QuicServer<F> {
             None
         };
 
-        // A handshake and the opening of the streams must finish within this time; the
+        // A handshake and the opening of its streams must finish within this time; the
         // acceptor runs them concurrently, so a client that stalls does not hold up others.
         let handshake_timeout = std::time::Duration::from_millis(
             epconf
@@ -700,7 +700,7 @@ impl<F: AcceptorCallback> QuicAcceptor<F> {
 
                 incoming = self.quic_endpoint.accept() => {
                     let Some(incoming) = incoming else {
-                        tracing::warn!("Can not accept QUIC connections: acceptor closed");
+                        tracing::debug!("QUIC acceptor closed");
                         break;
                     };
                     handshakes.push(self.establish(incoming, src_addr));
