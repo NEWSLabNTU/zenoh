@@ -42,6 +42,7 @@ use zenoh_task::TerminatableTask;
 use zenoh_transport::unicast::TransportUnicast;
 
 use self::{
+    geoloc::GeoLocationService,
     network::Network,
     pubsub::{pubsub_remove_node, undeclare_simple_subscription},
     queries::{queries_remove_node, undeclare_simple_queryable},
@@ -55,14 +56,15 @@ use super::{
 };
 use crate::net::{
     codec::Zenoh080Routing,
-    protocol::{geolocation::GeoLocation, linkstate::LinkStateList},
+    protocol::{geolocation::GeoLocationList, linkstate::LinkStateList},
     routing::{
         dispatcher::{face::Face, interests::RemoteInterest},
-        hat::{GPSD_CLIENT_DELAY_MS, TREES_COMPUTATION_DELAY_MS},
+        hat::TREES_COMPUTATION_DELAY_MS,
     },
     runtime::Runtime,
 };
 
+mod geoloc;
 mod interests;
 mod network;
 mod pubsub;
@@ -149,44 +151,13 @@ impl TreesComputationWorker {
     }
 }
 
-struct GpsdClient {
-    rx: tokio::sync::watch::Receiver<Option<gpsd_client::GPSData>>,
-    _task: TerminatableTask,
-}
-
-impl GpsdClient {
-    fn new() -> Result<Self, gpsd_client::GPSError> {
-        let mut client = gpsd_client::GPS::connect()?;
-        let (tx, rx) = tokio::sync::watch::channel(None);
-
-        let task = TerminatableTask::spawn_abortable(zenoh_runtime::ZRuntime::Net, async move {
-            loop {
-                tokio::time::sleep(Duration::from_millis(*GPSD_CLIENT_DELAY_MS)).await;
-                let data = match client.current_data() {
-                    Ok(data) => Some(data),
-                    Err(err) => {
-                        tracing::error!("fail to get data from GPSD: {err}");
-                        None
-                    }
-                };
-
-                if tx.send(data).is_err() {
-                    break;
-                }
-            }
-        });
-
-        Ok(Self { rx, _task: task })
-    }
-}
-
 struct HatTables {
     linkstatepeer_subs: HashSet<Arc<Resource>>,
     linkstatepeer_tokens: HashSet<Arc<Resource>>,
     linkstatepeer_qabls: HashSet<Arc<Resource>>,
     linkstatepeers_net: Option<Network>,
     linkstatepeers_trees_worker: TreesComputationWorker,
-    gpsd_client: Option<GpsdClient>,
+    geolocation_service: Option<GeoLocationService>,
 }
 
 impl HatTables {
@@ -197,7 +168,7 @@ impl HatTables {
             linkstatepeer_qabls: HashSet::new(),
             linkstatepeers_net: None,
             linkstatepeers_trees_worker: TreesComputationWorker::new(),
-            gpsd_client: None,
+            geolocation_service: None,
         }
     }
 
@@ -206,9 +177,8 @@ impl HatTables {
         let _ = self.linkstatepeers_trees_worker.tx.try_send(tables_ref);
     }
 
-    fn get_gps_data(&self) -> Option<gpsd_client::GPSData> {
-        let gpsd_client = self.gpsd_client.as_ref()?;
-        gpsd_client.rx.borrow().as_ref().cloned()
+    fn schedule_geoloc_update(&self) {
+        todo!()
     }
 }
 
@@ -237,15 +207,27 @@ impl HatBaseTrait for HatCode {
             unwrap_or_default!(config.routing().router().peers_failover_brokering());
 
         let enable_geolocation = *config.routing().geolocation().enabled();
+        let use_gpsd = *config.routing().geolocation().use_gpsd();
+        let fixed_latlon = *config.routing().geolocation().fixed_latlon();
+        let geoloc_announce_delay =
+            Duration::from_millis(*config.routing().geolocation().announce_delay());
         drop(config_guard);
 
-        let gpsd_client = if enable_geolocation {
-            match GpsdClient::new() {
-                Ok(client) => Some(client),
-                Err(err) => {
-                    tracing::error!("unable to start GPSD client: {err}");
-                    None
+        let geolocation_service = if enable_geolocation {
+            if use_gpsd {
+                match GeoLocationService::new_gpsd(geoloc_announce_delay) {
+                    Ok(service) => Some(service),
+                    Err(_) => {
+                        tracing::error!("unable to start geo-location service");
+                        None
+                    }
                 }
+            } else if let Some([lat, lon]) = fixed_latlon {
+                let service = GeoLocationService::new_fixed(geoloc_announce_delay, lat, lon);
+                Some(service)
+            } else {
+                tracing::error!("when geolocation is enabled, either one of use_gpsd = true or latlon must be specified");
+                None
             }
         } else {
             None
@@ -253,7 +235,7 @@ impl HatBaseTrait for HatCode {
 
         {
             let tables_mut = hat_mut!(tables);
-            tables_mut.gpsd_client = gpsd_client;
+            tables_mut.geolocation_service = geolocation_service;
             tables_mut.linkstatepeers_net = Some(Network::new(
                 "[Peers network]".to_string(),
                 tables.zid,
@@ -301,7 +283,13 @@ impl HatBaseTrait for HatCode {
         _send_declare: &mut SendDeclare,
     ) -> ZResult<()> {
         let link_id = if face.state.whatami != WhatAmI::Client {
-            if let Some(net) = hat_mut!(tables).linkstatepeers_net.as_mut() {
+            let hat = hat_mut!(tables);
+
+            if let Some(geoloc_service) = &hat.geolocation_service {
+                geoloc_service.add_face(face);
+            }
+
+            if let Some(net) = hat.linkstatepeers_net.as_mut() {
                 net.add_link(transport.clone())
             } else {
                 0
@@ -315,6 +303,7 @@ impl HatBaseTrait for HatCode {
         if face.state.whatami != WhatAmI::Client {
             hat_mut!(tables).schedule_compute_trees(tables_ref.clone());
         }
+
         Ok(())
     }
 
@@ -328,6 +317,12 @@ impl HatBaseTrait for HatCode {
         let mut wtables = zwrite!(tables.tables);
         let mut face_clone = face.clone();
         let face = get_mut_unchecked(face);
+
+        let hat = hat!(wtables);
+        if let Some(geoloc_service) = &hat.geolocation_service {
+            geoloc_service.remove_face(face.zid);
+        }
+
         let hat_face = match face.hat.downcast_mut::<HatFace>() {
             Some(hate_face) => hate_face,
             None => {
@@ -475,6 +470,16 @@ impl HatBaseTrait for HatCode {
 
             hat_mut!(tables).schedule_compute_trees(tables_ref.clone());
         } else if oam.id == OAM_GEOLOCATION {
+            // Get the geo-location service instance in the `HatCode`
+            let hat = hat_mut!(tables);
+            // let Some(net) = hat.linkstatepeers_net.as_mut() else {
+            //     return Ok(());
+            // };
+            let Some(geoloc_service) = &hat.geolocation_service else {
+                return Ok(());
+            };
+
+            // Obtain the buffer and zid
             let ZExtBody::ZBuf(buf) = oam.body else {
                 return Ok(());
             };
@@ -482,14 +487,21 @@ impl HatBaseTrait for HatCode {
                 return Ok(());
             };
 
+            // Decode the payload to geo-location list
             let codec = Zenoh080Routing::new();
             let mut reader = buf.reader();
 
-            let Ok(geo_loc): Result<GeoLocation, _> = codec.read(&mut reader) else {
+            let Ok(list): Result<GeoLocationList, _> = codec.read(&mut reader) else {
                 bail!("failed to decode geolocation");
             };
 
-            todo!();
+            // Don't track the geo-locations in client mode
+            let whatami = transport.get_whatami()?;
+            if whatami == WhatAmI::Client {
+                return Ok(());
+            };
+
+            geoloc_service.save_geolocs_from_from_oam(list.geo_locations, zid);
         }
 
         Ok(())

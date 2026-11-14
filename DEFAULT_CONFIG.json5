@@ -206,6 +206,10 @@
     geolocation: {
       /// Whether the geolocation feature is enabled.
       enabled: true,
+      /// Whether to connect to GPSD to obtain the coordinates.
+      use_gpsd: true,
+      /// The latitude and the longitude
+      latlon: [25.019287,121.5412583],
     },
   },
 

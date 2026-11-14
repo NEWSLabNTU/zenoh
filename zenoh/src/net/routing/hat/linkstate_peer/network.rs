@@ -13,6 +13,7 @@
 //
 use std::convert::TryInto;
 
+use ordered_float::NotNan;
 use petgraph::{
     graph::NodeIndex,
     visit::{VisitMap, Visitable},
@@ -28,25 +29,32 @@ use zenoh_link::Locator;
 use zenoh_protocol::{
     common::ZExtBody,
     core::{WhatAmI, WhatAmIMatcher, ZenohIdProto},
-    network::{oam, oam::id::OAM_LINKSTATE, NetworkBody, NetworkMessage, Oam},
+    network::{
+        oam,
+        oam::id::{OAM_GEOLOCATION, OAM_LINKSTATE},
+        NetworkBody, NetworkMessage, Oam,
+    },
 };
 use zenoh_transport::unicast::TransportUnicast;
 
 use crate::net::{
     codec::Zenoh080Routing,
     protocol::{
-        geolocation::GeoLocation,
+        geolocation::{GeoLocation, GeoLocationList, GeoMotion},
         linkstate::{LinkState, LinkStateList},
     },
-    routing::dispatcher::tables::NodeId,
+    routing::{dispatcher::tables::NodeId, hat::linkstate_peer::geoloc::GeoMotionData},
     runtime::{Runtime, WeakRuntime},
 };
+
+use super::geoloc::GeoLocationData;
 
 #[derive(Clone, Default)]
 struct Details {
     zid: bool,
     locators: bool,
     links: bool,
+    // geolocation: bool,
 }
 
 #[derive(Clone)]
@@ -56,6 +64,7 @@ pub(super) struct Node {
     pub(super) locators: Option<Vec<Locator>>,
     pub(super) sn: u64,
     pub(super) links: Vec<ZenohIdProto>,
+    pub(super) geolocation: Option<GeoLocationData>,
 }
 
 impl std::fmt::Debug for Node {
@@ -66,7 +75,7 @@ impl std::fmt::Debug for Node {
 
 pub(super) struct Link {
     pub(super) transport: TransportUnicast,
-    zid: ZenohIdProto,
+    pub(super) zid: ZenohIdProto,
     mappings: VecMap<ZenohIdProto>,
     local_mappings: VecMap<u64>,
 }
@@ -153,6 +162,7 @@ impl Network {
             locators: None,
             sn: 1,
             links: vec![],
+            geolocation: None,
         });
         Network {
             name,
@@ -274,11 +284,50 @@ impl Network {
         }
     }
 
-    fn make_geo_location(&self, idx: NodeIndex, details: &Details) -> Option<GeoLocation> {
-        todo!();
-    }
+    // fn make_geo_location(&self, idx: NodeIndex, details: &Details) -> Option<GeoLocation> {
+    //     macro_rules! notnan {
+    //         ($val:expr) => {
+    //             NotNan::new($val).expect("unexpected NAN value")
+    //         };
+    //     }
 
-    fn make_msg(&self, idxs: &Vec<(NodeIndex, Details)>) -> Result<NetworkMessage, DidntWrite> {
+    //     let node = &self.graph[idx];
+    //     let Some(geo_loc) = &node.geolocation else {
+    //         return None;
+    //     };
+    //     let GeoLocationData {
+    //         lon,
+    //         lat,
+    //         ref motion,
+    //         ..
+    //     } = *geo_loc;
+    //     let motion = motion.as_ref().map(|motion| {
+    //         let GeoMotionData { cog, speed } = *motion;
+    //         GeoMotion {
+    //             cog: notnan!(cog),
+    //             speed: notnan!(speed),
+    //         }
+    //     });
+
+    //     Some(GeoLocation {
+    //         psid: idx.index().try_into().unwrap(),
+    //         sn: node.sn,
+    //         zid: if details.zid {
+    //             Some(self.graph[idx].zid)
+    //         } else {
+    //             None
+    //         },
+    //         whatami: node.whatami,
+    //         lon: notnan!(lon),
+    //         lat: notnan!(lat),
+    //         motion,
+    //     })
+    // }
+
+    fn make_linkstate_msg(
+        &self,
+        idxs: &Vec<(NodeIndex, Details)>,
+    ) -> Result<NetworkMessage, DidntWrite> {
         let mut link_states = vec![];
         for (idx, details) in idxs {
             link_states.push(self.make_link_state(*idx, details));
@@ -286,6 +335,7 @@ impl Network {
         let codec = Zenoh080Routing::new();
         let mut buf = ZBuf::empty();
         codec.write(&mut buf.writer(), &LinkStateList { link_states })?;
+
         Ok(NetworkBody::OAM(Oam {
             id: OAM_LINKSTATE,
             body: ZExtBody::ZBuf(buf),
@@ -295,11 +345,67 @@ impl Network {
         .into())
     }
 
-    fn send_on_link(&self, mut idxs: Vec<(NodeIndex, Details)>, transport: &TransportUnicast) {
+    fn make_geoloc_msg(&self, idxs: &[NodeIndex]) -> Result<NetworkMessage, DidntWrite> {
+        let geo_locations = idxs
+            .into_iter()
+            .filter_map(|&idx| {
+                macro_rules! notnan {
+                    ($val:expr) => {
+                        NotNan::new($val).expect("unexpected NAN value")
+                    };
+                }
+
+                let node = &self.graph[idx];
+                let Some(geo_loc) = &node.geolocation else {
+                    return None;
+                };
+                let GeoLocationData {
+                    lon,
+                    lat,
+                    ref motion,
+                    ..
+                } = *geo_loc;
+                let motion = motion.as_ref().map(|motion| {
+                    let GeoMotionData { cog, speed } = *motion;
+                    GeoMotion {
+                        cog: notnan!(cog),
+                        speed: notnan!(speed),
+                    }
+                });
+
+                Some(GeoLocation {
+                    psid: idx.index().try_into().unwrap(),
+                    sn: node.sn,
+                    whatami: node.whatami,
+                    lon: notnan!(lon),
+                    lat: notnan!(lat),
+                    motion,
+                })
+            })
+            .collect();
+        let codec = Zenoh080Routing::new();
+        let mut buf = ZBuf::empty();
+        codec.write(&mut buf.writer(), &GeoLocationList { geo_locations })?;
+
+        Ok(NetworkBody::OAM(Oam {
+            id: OAM_GEOLOCATION,
+            body: ZExtBody::ZBuf(buf),
+            ext_qos: oam::ext::QoSType::OAM,
+            ext_tstamp: None,
+        })
+        .into())
+    }
+
+    fn send_linkstate_on_link(
+        &self,
+        mut idxs: Vec<(NodeIndex, Details)>,
+        transport: &TransportUnicast,
+    ) {
         for idx in &mut idxs {
             idx.1.locators = self.propagate_locators(idx.0, transport);
         }
-        if let Ok(msg) = self.make_msg(&idxs) {
+
+        if let Ok(msg) = self.make_linkstate_msg(&idxs) {
             tracing::trace!("{} Send to {:?} {:?}", self.name, transport.get_zid(), msg);
             if let Err(e) = transport.schedule(msg) {
                 tracing::debug!("{} Error sending LinkStateList: {}", self.name, e);
@@ -309,7 +415,7 @@ impl Network {
         }
     }
 
-    fn send_on_links<P>(&self, mut idxs: Vec<(NodeIndex, Details)>, mut parameters: P)
+    fn send_linkstate_on_links<P>(&self, mut idxs: Vec<(NodeIndex, Details)>, mut parameters: P)
     where
         P: FnMut(&Link) -> bool,
     {
@@ -317,7 +423,8 @@ impl Network {
             for idx in &mut idxs {
                 idx.1.locators = self.propagate_locators(idx.0, &link.transport);
             }
-            if let Ok(msg) = self.make_msg(&idxs) {
+
+            if let Ok(msg) = self.make_linkstate_msg(&idxs) {
                 if parameters(link) {
                     tracing::trace!("{} Send to {} {:?}", self.name, link.zid, msg);
                     if let Err(e) = link.transport.schedule(msg.clone()) {
@@ -480,6 +587,7 @@ impl Network {
                             locators: locators.clone(),
                             sn,
                             links,
+                            geolocation: None,
                         });
                         changes.updated_nodes.push((idx, self.graph[idx].clone()));
                         locators.is_some().then_some(idx)
@@ -504,7 +612,7 @@ impl Network {
                 if self.gossip {
                     if let Some(idx) = idx {
                         if self.gossip_multihop || self.links.values().any(|link| link.zid == zid) {
-                            self.send_on_links(
+                            self.send_linkstate_on_links(
                                 vec![(
                                     idx,
                                     Details {
@@ -574,6 +682,7 @@ impl Network {
                             locators,
                             sn,
                             links: links.clone(),
+                            geolocation: None,
                         };
                         tracing::debug!("{} Add node (state) {}", self.name, zid);
                         let idx = self.add_node(node);
@@ -604,6 +713,7 @@ impl Network {
                         locators: None,
                         sn: 0,
                         links: vec![],
+                        geolocation: None,
                     };
                     tracing::debug!("{} Add node (reintroduced) {}", self.name, link.clone());
                     let idx = self.add_node(node);
@@ -709,13 +819,13 @@ impl Network {
                         })
                         .collect();
                     if !new_idxs.is_empty() || !updated_idxs.is_empty() {
-                        self.send_on_link(
+                        self.send_linkstate_on_link(
                             [&new_idxs[..], &updated_idxs[..]].concat(),
                             &link.transport,
                         );
                     }
                 } else if !new_idxs.is_empty() {
-                    self.send_on_link(new_idxs.clone(), &link.transport);
+                    self.send_linkstate_on_link(new_idxs.clone(), &link.transport);
                 }
             }
         }
@@ -750,6 +860,7 @@ impl Network {
                             locators: None,
                             sn: 0,
                             links: vec![],
+                            geolocation: None,
                         }),
                         true,
                     )
@@ -772,7 +883,7 @@ impl Network {
                                 == WhatAmI::Router)
                 })
                 .for_each(|link| {
-                    self.send_on_link(
+                    self.send_linkstate_on_link(
                         if new || (!self.full_linkstate && !self.gossip_multihop) {
                             vec![
                                 (
@@ -833,7 +944,7 @@ impl Network {
                 )
             })
             .collect();
-        self.send_on_link(idxs, &transport);
+        self.send_linkstate_on_link(idxs, &transport);
         free_index
     }
 
@@ -853,7 +964,7 @@ impl Network {
 
             self.graph[self.idx].sn += 1;
 
-            self.send_on_links(
+            self.send_linkstate_on_links(
                 vec![(
                     self.idx,
                     Details {
@@ -871,7 +982,7 @@ impl Network {
                 self.graph.remove_node(idx);
             }
             if self.router_peers_failover_brokering {
-                self.send_on_links(
+                self.send_linkstate_on_links(
                     vec![(
                         self.idx,
                         Details {

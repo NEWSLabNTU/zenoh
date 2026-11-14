@@ -362,10 +362,17 @@ validated_struct::validator! {
                 timeout: Option<u64>,
             },
 
-            pub geolocation: #[derive(Default)]
+            pub geolocation:
             GeoLocatoinConf {
+		/// Whether the geo-location feature is enabled.
                 enabled: bool,
-            }
+		/// Whether to obtain geo-location from GPSD or not.
+		use_gpsd: bool,
+		/// Set a fixed longitude and latitude. It is effective only when use_gpsd = false.
+		fixed_latlon: Option<[f64; 2]>,
+		/// Announce geo-location every after this milliseconds.
+		announce_delay: u64,
+            },
         },
 
         /// The declarations aggregation strategy.
@@ -629,6 +636,17 @@ impl Default for PermissionsConf {
         PermissionsConf {
             read: true,
             write: false,
+        }
+    }
+}
+
+impl Default for GeoLocatoinConf {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            use_gpsd: false,
+            fixed_latlon: None,
+            announce_delay: 5000,
         }
     }
 }

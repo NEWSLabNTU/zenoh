@@ -50,7 +50,6 @@ mod router;
 
 zconfigurable! {
     pub static ref TREES_COMPUTATION_DELAY_MS: u64 = 100;
-    pub static ref GPSD_CLIENT_DELAY_MS: u64 = 500;
 }
 
 #[derive(Default, serde::Serialize)]

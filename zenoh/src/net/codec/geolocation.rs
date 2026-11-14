@@ -1,14 +1,14 @@
 use super::Zenoh080Routing;
-use crate::net::protocol::geolocation::{self, GeoLocation};
+use crate::net::protocol::geolocation::{self, GeoLocation, GeoLocationList, GeoMotion};
 use zenoh_buffers::{
     reader::{DidntRead, Reader},
     writer::{DidntWrite, Writer},
 };
 use zenoh_codec::{RCodec, WCodec, Zenoh080};
 use zenoh_config::WhatAmI;
-use zenoh_protocol::{common::imsg, core::ZenohIdProto};
+use zenoh_protocol::common::imsg;
 
-// LinkState
+// GeoLocation
 impl<W> WCodec<&GeoLocation, &mut W> for Zenoh080Routing
 where
     W: Writer,
@@ -19,19 +19,12 @@ where
         let codec = Zenoh080::new();
         // Options
         let mut options = 0;
-        if msg.zid.is_some() {
-            options |= geolocation::PID;
-        }
         if msg.whatami.is_some() {
             options |= geolocation::WAI;
         }
 
-        match (msg.cog.is_some(), msg.speed.is_some()) {
-            (true, true) => {
-                options |= geolocation::MOT;
-            }
-            (false, false) => {}
-            _ => return Err(DidntWrite),
+        if msg.motion.is_some() {
+            options |= geolocation::MOT;
         }
 
         codec.write(&mut *writer, options)?;
@@ -39,9 +32,6 @@ where
         // Body
         codec.write(&mut *writer, msg.psid)?;
         codec.write(&mut *writer, msg.sn)?;
-        if let Some(zid) = msg.zid.as_ref() {
-            codec.write(&mut *writer, zid)?;
-        }
         if let Some(wai) = msg.whatami {
             let wai: u8 = wai.into();
             codec.write(&mut *writer, wai)?;
@@ -49,11 +39,9 @@ where
 
         codec.write(&mut *writer, msg.lon.to_le_bytes())?;
         codec.write(&mut *writer, msg.lat.to_le_bytes())?;
-        if let Some(cog) = msg.cog {
-            codec.write(&mut *writer, cog.to_le_bytes())?;
-        }
-        if let Some(speed) = msg.speed {
-            codec.write(&mut *writer, speed.to_le_bytes())?;
+        if let Some(motion) = &msg.motion {
+            codec.write(&mut *writer, motion.cog.to_le_bytes())?;
+            codec.write(&mut *writer, motion.speed.to_le_bytes())?;
         }
 
         Ok(())
@@ -86,12 +74,6 @@ where
         let options: u64 = codec.read(&mut *reader)?;
         let psid: u64 = codec.read(&mut *reader)?;
         let sn: u64 = codec.read(&mut *reader)?;
-        let zid = if imsg::has_option(options, geolocation::PID) {
-            let zid: ZenohIdProto = codec.read(&mut *reader)?;
-            Some(zid)
-        } else {
-            None
-        };
         let whatami = if imsg::has_option(options, geolocation::WAI) {
             let wai: u8 = codec.read(&mut *reader)?;
             Some(WhatAmI::try_from(wai).map_err(|_| DidntRead)?)
@@ -100,23 +82,59 @@ where
         };
         let lon = read_f64!(codec);
         let lat = read_f64!(codec);
-        let (cog, speed) = if imsg::has_option(options, geolocation::MOT) {
+        let motion = if imsg::has_option(options, geolocation::MOT) {
             let cog = read_f32!(codec);
             let speed = read_f32!(codec);
-            (Some(cog), Some(speed))
+            Some(GeoMotion { cog, speed })
         } else {
-            (None, None)
+            None
         };
 
         Ok(GeoLocation {
             psid,
             sn,
-            zid,
             whatami,
             lon,
             lat,
-            cog,
-            speed,
+            motion,
         })
+    }
+}
+
+impl<W> WCodec<&GeoLocationList, &mut W> for Zenoh080Routing
+where
+    W: Writer,
+{
+    type Output = Result<(), DidntWrite>;
+
+    fn write(self, writer: &mut W, x: &GeoLocationList) -> Self::Output {
+        let codec = Zenoh080::new();
+
+        codec.write(&mut *writer, x.geo_locations.len())?;
+        for ls in &x.geo_locations {
+            self.write(&mut *writer, ls)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl<R> RCodec<GeoLocationList, &mut R> for Zenoh080Routing
+where
+    R: Reader,
+{
+    type Error = DidntRead;
+
+    fn read(self, reader: &mut R) -> Result<GeoLocationList, Self::Error> {
+        let codec = Zenoh080::new();
+
+        let len: usize = codec.read(&mut *reader)?;
+        let mut geo_locations = Vec::with_capacity(len);
+        for _ in 0..len {
+            let ls: GeoLocation = self.read(&mut *reader)?;
+            geo_locations.push(ls);
+        }
+
+        Ok(GeoLocationList { geo_locations })
     }
 }
