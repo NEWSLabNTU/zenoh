@@ -56,15 +56,17 @@ $delta_e (alpha)$ that maps an arrival curve $alpha$ to a delay bound, as in RFC
 
 *Publisher declarations.* $p = (k_p, v_p, sigma_p)$: key expression, attachment node,
 and contract $sigma_p = (r_p, b_p, D_p, epsilon_p, pi_p)$ — rate, burst, deadline, loss
-budget, priority (RFC 9016 fields). $k_p$ may contain wildcards.#footnote[Whether
-Zenoh delivers a put on a wildcard key to every intersecting subscriber is assumed
-here and must be checked against the router code; if puts must be concrete, $k_p$ is
-concrete and only subscribers carry wildcards.]
+budget, priority (RFC 9016 fields). $k_p$ may contain wildcards: Zenoh delivers a
+publication on #ke("test/*") to a subscriber on #ke("test/cache")
+(`routing-semantics.md`, finding 1).
 
 *Subscriber declarations.* $s = (k_s, d_s, v_s, beta_s)$: subscription key expression
 $k_s$; deterministic selector $d_s$ with $k_s includes d_s$ (which part of the
 subscription asks for guaranteed delivery; $d_s = emptyset$ means best effort only);
-attachment node $v_s$; receive budget $beta_s$ (b/s).
+attachment node $v_s$; receive budget $beta_s$ (b/s). The network may see a wider
+declaration $hat(k)_s supset.eq k_s$ when the session aggregates subscriptions
+(finding 7); delivery follows $hat(k)_s$, so $d_s$ must be signalled separately and
+never aggregated, or admission would reserve for traffic the application drops.
 
 *Matching.* With publisher set $P$ and subscriber set $S$, delivery and eligibility
 are
@@ -80,10 +82,15 @@ changes whenever any declaration appears or disappears.
 = Admission state and constraints
 
 The admission state is a set $A subset.eq M^det$ of admitted pairs. For each publisher,
-routing (Zenoh's own trees, or a PCE) gives a path $"path"(p, s)$ from $v_p$ to $v_s$;
-the delivery tree is
+routing gives a path $"path"(p, s)$ from $v_p$ to $v_s$; the delivery tree is
 
 $ T_p = union.big_({s : (p, s) in A}) "path"(p, s). $
+
+In a Zenoh router region the paths are the source router's shortest-path tree, so
+$T_p$ is a tree and $"path"(p,s)$ is fixed by link weights (findings 3–4); across
+regions the tree is re-rooted at each region's entry router (finding 5). In a peer
+region there is no relaying: the publisher sends one copy per subscribing peer
+(finding 6), so $T_p$ is a star and its access link carries $r_p$ once per peer.
 
 A state $A$ is *feasible* when three constraints hold.
 
@@ -134,9 +141,11 @@ priority weight subject to @eq-cap–@eq-budget. With routing fixed and no preem
 
 = Locality under declaration aggregation
 
-Zenoh routers may aggregate declarations (the `aggregation` config): upstream of a
-router, many subscriptions appear as one declaration such as #ke("video/**"), so the
-true fan-out is hidden. The question is what admission needs to see through that.
+Inside a router region nothing is hidden at router granularity: every router learns
+which routers hold matching subscribers (finding 4). Fan-out is hidden only at the
+edge: a session may aggregate its subscriptions into one wider declaration
+(finding 7), and a router may answer a client's interest with aggregated
+declarations (finding 8). The question is what admission needs to see through that.
 
 *Lemma 1 (bandwidth needs one bit per face).* For edge $e = (u, w)$ and publisher $p$,
 the load term in @eq-cap is $r_p dot bb(1)[exists s : (p, s) in A, "path"(p,s) in.rev e]$.
@@ -202,15 +211,13 @@ Envelopes raise the problem that makes covering non-trivial: they overlap. For
 + *Envelope charging*: a sound, stable charging rule for overlapping key-expression
   envelopes, and the admission loss it causes compared with exact per-pair admission.
 + *Wildcard publishers*: semantics and accounting when $k_p$ contains wildcards
-  (depends on the footnote in Section 2).
+  (now confirmed to exist; see Section 2).
 + *Churn*: soft-state refresh versus explicit undeclare, and stability under
   subscriber flapping (hold-down, hysteresis), extending RSVP soft state to
   declarations.
 
 = Next steps
 
-+ Check the router's delivery semantics for wildcard puts and its declaration
-  aggregation and interest code paths, to pin down Section 2 and Lemma 1's assumptions.
 + Write a simulator over Zenoh's own `keyexpr` crate: random topologies, declaration
   traces, greedy admission, envelope charging rules; measure admitted fraction and
   per-event cost.
