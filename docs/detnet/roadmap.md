@@ -87,13 +87,13 @@ clients as leaves), emulated by moving a container's link between edge routers.
 | Gate | After | Question | If no |
 | --- | --- | --- | --- |
 | G1 | A1–A2 | Is the tail dominated by queueing that scheduling can fix, rather than host noise? | Drop the firm tier; keep hard (owned TSN) and statistical tiers; focus on bandwidth admission |
-| G2 | C2 | Does wildcard admission keep its advantage over exact identifiers across mixes and topologies? | Narrow C2 to the mixes where it holds |
-| G3 | C2 | Does capacity-aware routing beat shortest-path trees enough to justify explicit paths? | Skip E1/E2 |
+| G2 | C2 | Does wildcard admission keep its advantage over exact identifiers across mixes and topologies? | Narrow C2 to the mixes where it holds. **Result:** holds against exact identifiers everywhere; only 1–2 points over frequently refreshed application-side expansion, so C2 narrowed to exact, immediate in-network expansion |
+| G3 | C2 | Does capacity-aware routing beat shortest-path trees enough to justify explicit paths? | Skip E1/E2. **Result:** not triggered (+2 to +5 points, greedy lower bound) |
 | G4 | A, D | Are loss budgets missed on lossy emulated links? | Skip E4 |
 
 ## Order
 
-1. **Now, in parallel:** A0 (containerlab testbed) and C2 (simulator extensions).
+1. **Done:** A0 testbed built (first runs pending a host reboot); C2 simulator extensions, gates G2 and G3 evaluated ([track C](track-c-admit.md)).
 2. **Next:** A1 baseline → G1; B1 contracts.
 3. **Then:** C4 admission plugin in the testbed, with B2.
 4. **Later:** A2/A3 and B3 as gates allow; D; B4 PRs as pieces stabilise.

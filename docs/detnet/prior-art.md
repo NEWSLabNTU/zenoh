@@ -9,7 +9,7 @@ the defensible contributions are four narrower claims, listed first. Sources mar
 | # | Claim | Status | Type |
 | --- | --- | --- | --- |
 | C1 | Per-key-expression stream identity visible to a DetNet/TSN network, with reservations created and removed by Zenoh declarations | Open for Zenoh; solved for DDS by DDS-TSN | Engineering (port of a known approach) |
-| C2 | Admission when both publisher and subscriber declarations are wildcard key expressions, so the receiver set is an intersection that any new declaration can enlarge, over a router mesh that aggregates declarations | Open; dynamic membership itself is solved | Research |
+| C2 | Admission when both publisher and subscriber declarations are wildcard key expressions, so the receiver set is an intersection that any new declaration can enlarge, over a router mesh that aggregates declarations; claimed as exact, immediate in-network expansion, since frequently refreshed application-side expansion admits nearly as much (G2) | Open; dynamic membership itself is solved | Research |
 | C3 | DetNet-grade (firm, composable) bounds for flows whose transit node is itself mobile, including during repair | Open; only soft QoS exists | Research (hard) |
 | C4 | Measured tail and worst-case latency of a tokio-based Zenoh router, with and without real-time tuning; software stateless queuing (C-SCORE/TCQF) evaluated in it | Open: no tail data for Zenoh, no measured software C-SCORE/TCQF | Empirical |
 

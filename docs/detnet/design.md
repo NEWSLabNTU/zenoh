@@ -20,7 +20,7 @@ are four narrower claims, checked against the literature in
 | Claim | Contribution | Type | Track |
 | --- | --- | --- | --- |
 | C1 | Per-key-expression stream identity visible to DetNet/TSN, with reservations driven by declarations | Engineering; follows OMG DDS-TSN | [B](track-b-map.md) |
-| C2 | Admission when publisher and subscriber declarations are both wildcard key expressions, the receiver set being their intersection | Research; main claim | [C](track-c-admit.md) |
+| C2 | Admission when publisher and subscriber declarations are both wildcard key expressions, the receiver set being their intersection, expanded exactly and immediately inside the network (gate G2: not a gain over an ideal, frequently refreshed application-side expansion) | Research; main claim | [C](track-c-admit.md) |
 | C3 | Firm bounds for flows across edge handover (mobile transit only if peer relaying returns upstream) | Research; stretch | [D](track-d-mobility.md) |
 | C4 | Measured tail latency of a tokio-based Zenoh router, and of software stateless queuing in it | Empirical | [A](track-a-measure.md) |
 

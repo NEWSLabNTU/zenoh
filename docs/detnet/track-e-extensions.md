@@ -16,7 +16,9 @@ option is not enough.
 ## Gates
 
 - **G3** (from track C): capacity-aware routing in the simulator admits clearly more
-  than Zenoh's shortest-path trees plus `transport_weights`.
+  than Zenoh's shortest-path trees plus `transport_weights`. **Not triggered**
+  (2026-11-16): +2 to +5 points only, so E1/E2 stay parked unless a re-optimising
+  variant or a real topology shows more. Relaying inside peer regions matters more.
 - **G1** (from track A): the firm tier is viable and queueing dominates the tail.
 - **G4** (from tracks A and D): loss budgets are missed on lossy emulated links.
 
