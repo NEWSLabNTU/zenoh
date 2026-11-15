@@ -95,11 +95,11 @@ and falls back to declaration-driven Zenoh routing.
 #table(
   columns: (auto, auto, auto, auto),
   stroke: 0.4pt + luma(200),
-  table.header([*Extension*], [*Standard model*], [*Written by*], [*Phase*]),
-  [Segment list (unicast path)], [SR, RFC 8402 / RFC 9256], [ingress], [3],
-  [Tree bitstring (multi-subscriber)], [BIER-TE, RFC 9262], [ingress, region gateway], [3],
-  [Finish time or cycle ID], [C-SCORE / TCQF drafts], [ingress, updated per hop], [4],
-  [Flow sequence number], [DetNet PREOF, RFC 8655 / RFC 8938], [ingress], [5],
+  table.header([*Extension*], [*Standard model*], [*Written by*], [*Track (gate)*]),
+  [Segment list (unicast path)], [SR, RFC 8402 / RFC 9256], [ingress], [E1 (G3)],
+  [Tree bitstring (multi-subscriber)], [BIER-TE, RFC 9262], [ingress, region gateway], [E2 (G3)],
+  [Finish time or cycle ID], [C-SCORE / TCQF drafts], [ingress, updated per hop], [E3 (G1)],
+  [Flow sequence number], [DetNet PREOF, RFC 8655 / RFC 8938], [ingress], [E4 (G4)],
 )
 
 #pagebreak()

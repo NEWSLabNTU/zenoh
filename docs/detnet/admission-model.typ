@@ -221,7 +221,7 @@ Envelopes raise the problem that makes covering non-trivial: they overlap. For
 + Write a simulator over Zenoh's own `keyexpr` crate: random topologies, declaration
   traces, greedy admission, envelope charging rules; measure admitted fraction and
   per-event cost.
-+ Formalise Lemmas 1–2; then decide whether the admission plugin (Phase 1) keeps exact
++ Formalise Lemmas 1–2; then decide whether the admission plugin (track C4) keeps exact
   per-pair state or per-face summaries.
 
 #text(size: 8.5pt, fill: luma(100))[Draft model. Prior art and sources: `prior-art.md`.

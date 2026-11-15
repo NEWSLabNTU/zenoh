@@ -94,7 +94,7 @@ effect of real-time tuning on it, and a measured software C-SCORE or TCQF.
 
 ## Consequences for the plan
 
-- Phase 1 delivers C4 and the groundwork for C1; the result is publishable either way.
+- Track A delivers C4 and track B1 the groundwork for C1; the C4 result is publishable either way.
 - C1 follows DDS-TSN's design; cite it as the model rather than claiming novelty.
 - C2 is the main research contribution; it needs a formal model of key-expression
   intersection and covering before any code.

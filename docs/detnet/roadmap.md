@@ -3,8 +3,7 @@
 Revised 2026-11-15 after the literature check ([prior-art.md](prior-art.md)), the
 routing code check ([routing-semantics.md](routing-semantics.md)) and the first
 simulator results ([detnet-sim](../../tools/detnet-sim/README.md)). Supersedes the
-five-phase plan; the phase documents remain as background and map onto the tracks
-below.
+five-phase plan; each track has its own document (track-a … track-e).
 
 ## Constraints
 
@@ -23,11 +22,11 @@ below.
 
 | Track | Claim | Steps | Output |
 | --- | --- | --- | --- |
-| A. Measure | C4 | A0 containerlab testbed; A1 baseline tail latency; A2 tuning; A3 software C-SCORE (gated) | Tail-latency report |
-| B. Map | C1 | B1 contracts; B2 key expression → link → DSCP; B3 TSN emulation; B4 upstream PRs | Working mapping, PRs |
-| C. Admit | C2 | C1 model + simulator (first version done); C2 simulator extensions; C3 proofs; C4 admission plugin | Main paper |
-| D. Mobility | C3 | Edge handover in a router region (stretch) | Extension of C, or dropped |
-| E. Extensions | — | Explicit paths, BIER-TE, scheduling tags, PREOF — each behind a gate | Only if a gate triggers |
+| [A. Measure](track-a-measure.md) | C4 | A0 containerlab testbed; A1 baseline tail latency; A2 tuning; A3 software C-SCORE (gated) | Tail-latency report |
+| [B. Map](track-b-map.md) | C1 | B1 contracts; B2 key expression → link → DSCP; B3 TSN emulation; B4 upstream PRs | Working mapping, PRs |
+| [C. Admit](track-c-admit.md) | C2 | C1 model + simulator (first version done); C2 simulator extensions; C3 proofs; C4 admission plugin | Main paper |
+| [D. Mobility](track-d-mobility.md) | C3 | Edge handover in a router region (stretch) | Extension of C, or dropped |
+| [E. Extensions](track-e-extensions.md) | — | Explicit paths, BIER-TE, scheduling tags, PREOF — each behind a gate | Only if a gate triggers |
 
 ### A. Measure (C4)
 
@@ -99,7 +98,7 @@ clients as leaves), emulated by moving a container's link between edge routers.
 3. **Then:** C4 admission plugin in the testbed, with B2.
 4. **Later:** A2/A3 and B3 as gates allow; D; B4 PRs as pieces stabilise.
 
-## Mapping from the old phases
+## Mapping from the old phases (removed)
 
 | Old phase | New place |
 | --- | --- |
