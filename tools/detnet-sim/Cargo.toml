@@ -1,0 +1,13 @@
+[package]
+name = "detnet-sim"
+version = "0.1.0"
+edition = "2021"
+description = "Simulator for admission control of wildcard-defined receiver sets (DetNet in Zenoh, claim C2)"
+publish = false
+
+# Standalone: not a member of the zenoh workspace.
+[workspace]
+
+[dependencies]
+zenoh-keyexpr = { path = "../../commons/zenoh-keyexpr" }
+rand = "0.8.5"
