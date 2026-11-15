@@ -511,6 +511,26 @@ own access link becomes the bottleneck.
 At these rates (assumed, not measured) one PCE per region is enough; a region gateway
 forwards only inter-region tree changes.
 
+= What is new
+
+Almost every mechanism above is prior art: segment routing, BIER-TE, PCE, RSVP-TE
+preemption, PIM-SM anchors, guard channels, layered multicast and PREOF. The
+contributions are narrower; `prior-art.md` lists the sources.
+
+#table(
+  columns: (auto, 1fr, auto),
+  stroke: 0.4pt + luma(200),
+  table.header([*Claim*], [*Contribution*], [*Nearest prior art*]),
+  [C1], [Per-key-expression stream identity visible to DetNet/TSN, reservations driven by declarations (engineering)], [OMG DDS-TSN; zenoh-pico raweth key→MAC/VLAN],
+  [C2], [Admission when publisher and subscriber declarations are both wildcard key expressions, over a mesh that aggregates declarations (research)], [RSVP, MSRP/RAP, IndiQoS, SOME/IP-TSN (exact IDs only)],
+  [C3], [Firm bounds for flows whose transit node is mobile, including during repair (research, stretch)], [INSIGNIA, SWAN, CEDAR (soft only); DetNet/RAW (static)],
+  [C4], [Tail latency of a tokio-based Zenoh router; software C-SCORE/TCQF measured (empirical)], [DPDK and PREEMPT_RT studies; no Zenoh tail data],
+)
+
+The protocol extensions in use cases 1–5 are optional: each is added only when a
+measurement shows that Zenoh `transport_weights`, one link per deterministic flow, or
+underlay/5G QoS is not enough.
+
 = Open questions
 
 - *Anchor placement:* one anchor per publisher chosen by load, or a fixed anchor per

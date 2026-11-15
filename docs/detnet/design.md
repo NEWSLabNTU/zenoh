@@ -12,6 +12,19 @@ standards. A flow that declares its traffic and is admitted gets three guarantee
 **Non-goals:** a new routing protocol, clock-synchronised scheduling across the
 internet, and replacing an underlay's own traffic engineering where one exists.
 
+**Positioning.** A DDS-TSN equivalent for Zenoh, plus overlay mechanisms only where no
+underlay control exists. Nearly every mechanism here is prior art; the contributions
+are four narrower claims, checked against the literature in
+[prior-art.md](prior-art.md):
+
+- **C1** — per-key-expression stream identity visible to DetNet/TSN, with reservations
+  driven by declarations (engineering; follows OMG DDS-TSN).
+- **C2** — admission when publisher and subscriber declarations are both wildcard key
+  expressions over a router mesh that aggregates declarations (research; main claim).
+- **C3** — firm bounds for flows whose transit node is mobile (research; stretch goal).
+- **C4** — measured tail latency of a tokio-based Zenoh router and of software
+  stateless queuing in it (empirical; Phase 1).
+
 ## Principles
 
 - **Reuse standards.** Every mechanism maps to an RFC or an IETF working-group draft;
@@ -22,6 +35,9 @@ internet, and replacing an underlay's own traffic engineering where one exists.
 - **Incremental deployment.** New network-message extensions are non-mandatory, so
   routers that do not understand them fall back to normal routing.
 - **Measure before changing the wire.** Phases that need no protocol change come first.
+  Segment lists, BIER-TE trees and scheduling tags are added only when a measurement
+  shows the simpler option — Zenoh `transport_weights`, one `?prio=` link per
+  deterministic flow, or underlay/5G QoS — is not enough.
 
 ## Guarantee tiers
 
@@ -101,9 +117,12 @@ Roles:
 ## Risks and open questions
 
 - **Scheduler jitter:** can a tokio-based router meet a firm bound, or does the firm
-  tier need a dedicated data-plane thread? Phase 1 measures this.
-- **Pub/sub fan-out:** RFC 9320 assumes point-to-point flows; a publisher feeding a
-  tree needs a bound per subscriber path.
+  tier need a dedicated data-plane thread? Phase 1 measures this. Prior work judges
+  tokio's work stealing unsuitable for real time (Škoudlil et al., ECRTS 2025) and no
+  tail-latency data for Zenoh exists (C4).
+- **Pub/sub fan-out:** RFC 9320 allows point-to-multipoint paths but assumes they are
+  fixed; Zenoh's receiver set is the intersection of wildcard declarations and
+  changes at run time (C2).
 - **Hidden shared bottlenecks:** overlay links over the same physical link do not add
   up in capacity; a detection method is needed.
 - **Regions overlap:** does #2096's multi-path inter-region routing host explicit paths
