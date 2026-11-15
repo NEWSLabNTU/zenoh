@@ -1,6 +1,6 @@
 # Track A: Measure (claim C4)
 
-**Status:** not started · **Wire change:** none · **Testbed:** containerlab
+**Status:** A0 built (`tools/detnet-lab/`), first runs pending · **Wire change:** none · **Testbed:** containerlab
 
 Measure the tail latency of a Zenoh router carrying a deterministic stream, and find
 out whether the tail comes from queueing (which scheduling can fix) or from host and
@@ -21,6 +21,9 @@ reports mean or median only ([prior-art.md](prior-art.md), C4).
   clock, so no PTP is needed.
 - Recorder writes per-sample latency to CSV; analysis script reports p50, p99, p99.9,
   p99.99 and max.
+- Built: `line3.clab.yml` (r1–r2–r3, bottleneck `r2:eth2` with netem plus tbf),
+  `zprobe` probe, `lab.sh` driver with `stock` and `prio` profiles. See
+  [detnet-lab](../../tools/detnet-lab/README.md).
 
 ### A1 Baseline
 

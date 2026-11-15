@@ -1,0 +1,48 @@
+# A0 topology: three routers in a line, probe and cross-traffic endpoints at each end.
+#
+#   pub  --+                       +-- sub
+#          r1 ---- r2 ==== r3 -----+
+#   xpub --+     (bottleneck)      +-- xsub
+#
+# r2:eth2 -> r3 is the shaped bottleneck (see shape.sh). Zenoh runs hop by hop:
+# endpoints are clients of their edge router, routers connect to neighbours, so no
+# IP forwarding is needed. Processes are started by run.sh, not here.
+name: detnet-line3
+
+topology:
+  defaults:
+    kind: linux
+    image: detnet-node:latest
+    binds:
+      - ../../target/release:/opt/zenoh:ro
+      - ./results:/results
+  nodes:
+    r1:
+      exec:
+        - ip addr add 10.12.0.1/24 dev eth1
+        - ip addr add 10.1.1.1/24 dev eth2
+        - ip addr add 10.1.2.1/24 dev eth3
+    r2:
+      exec:
+        - ip addr add 10.12.0.2/24 dev eth1
+        - ip addr add 10.23.0.2/24 dev eth2
+    r3:
+      exec:
+        - ip addr add 10.23.0.3/24 dev eth1
+        - ip addr add 10.3.1.1/24 dev eth2
+        - ip addr add 10.3.2.1/24 dev eth3
+    pub:
+      exec: [ip addr add 10.1.1.10/24 dev eth1]
+    xpub:
+      exec: [ip addr add 10.1.2.10/24 dev eth1]
+    sub:
+      exec: [ip addr add 10.3.1.10/24 dev eth1]
+    xsub:
+      exec: [ip addr add 10.3.2.10/24 dev eth1]
+  links:
+    - endpoints: [r1:eth1, r2:eth1]
+    - endpoints: [r2:eth2, r3:eth1]
+    - endpoints: [pub:eth1, r1:eth2]
+    - endpoints: [xpub:eth1, r1:eth3]
+    - endpoints: [sub:eth1, r3:eth2]
+    - endpoints: [xsub:eth1, r3:eth3]

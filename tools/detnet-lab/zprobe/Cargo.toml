@@ -1,0 +1,16 @@
+[package]
+name = "zprobe"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "One-way latency probe for the DetNet containerlab testbed"
+
+# Standalone: not a member of the zenoh workspace.
+[workspace]
+
+[dependencies]
+zenoh = { path = "../../../zenoh" }
+clap = { version = "4.5.47", features = ["derive"] }
+
+[profile.release]
+debug = false
