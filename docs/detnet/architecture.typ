@@ -360,8 +360,164 @@ Handovers happen every few seconds or minutes per device. Each one touches the P
 one or two ingress edges, never transit routers, and changes link-state only if a band
 is crossed. Global flooding stays on the minutes timescale.
 
+#pagebreak()
+
+= Use case 5: many mobile publishers, many subscribers
+
+The cases above combine. A fleet of mobile peers (vehicles, drones, body cameras)
+each publishes live video, and each stream has several subscribers: a cloud operations
+centre that watches every stream, a recorder, and peers nearby that watch a few. The
+design must hold when all of this happens at once.
+
+*Working scenario.* 200 publishers on 6 edge routers (cells or access points), one
+core region, a cloud site. Each stream has a 2 Mb/s base layer and 6 Mb/s of
+enhancement layers. Each publisher hands over about once a minute, so the system sees
+about 3 handovers per second. The numbers only size the problems below; they are
+assumptions.
+
+== What breaks if the earlier cases are simply added up
+
+#table(
+  columns: (auto, 1fr, auto),
+  stroke: 0.4pt + luma(200),
+  table.header([*Problem*], [*Why*], [*Answer*]),
+  [Tree churn], [Each handover moves the root of a source-rooted tree, so every branch is recomputed: 3 handovers/s across 200 trees], [anchored trees],
+  [Handover storms], [Vehicles cross the same cell boundary together; the new edge sees a burst of re-admissions], [guard bandwidth],
+  [Uplink cost of PREOF], [Duplicating 8 Mb/s over Wi-Fi and cellular doubles the scarcest link], [replicate base layer only],
+  [Subscriber fan-in], [The operations centre's access link carries the sum of 200 streams: 400 Mb/s of base layers alone], [subscriber budget],
+  [Heterogeneous subscribers], [A nearby peer on Wi-Fi and the recorder in the cloud need different rates], [layers as flows],
+  [Hairpinning], [A nearby subscriber on the same edge would receive the stream through the anchor], [local breakout],
+  [PCE load], [Every event going through one PCE], [edge-local admission],
+)
+
+== Anchored trees: separate mobility from fan-out
+
+#figure(
+  diagram(
+    spacing: (20mm, 10mm),
+    node-stroke: 0.6pt,
+    node-corner-radius: 3pt,
+    node-shape: rect,
+    node((0, 0), [V1], name: <v1>),
+    node((0, 1.2), [V2], name: <v2>),
+    node((1, 0), [E1], name: <e1>, fill: accent.lighten(85%)),
+    node((1, 1.2), [E2], name: <e2>, fill: accent.lighten(85%)),
+    node((2.2, 0.6), [*Anchor A*\ #text(size: 8pt)[tree root for V1, V2]], name: <a>, fill: luma(240)),
+    node((3.4, 0.6), [Core], name: <c>),
+    node((4.6, 0), [Ops centre], name: <ops>),
+    node((4.6, 1.2), [Recorder], name: <rec>),
+    node((1, 2.4), [Peer P], name: <p>),
+    edge(<v1>, <e1>, "-|>", stroke: fstroke),
+    edge(<v2>, <e2>, "-|>", stroke: fstroke),
+    edge(<v2>, <e1>, "-|>", stroke: (paint: accent, thickness: 1.2pt, dash: "dashed"), [handover], label-side: left),
+    edge(<e1>, <a>, "-|>", stroke: fstroke),
+    edge(<e2>, <a>, "-|>", stroke: fstroke, [unicast segments], label-side: right),
+    edge(<a>, <c>, "-|>", stroke: fstroke, [BIER-TE], label-side: right),
+    edge(<c>, <ops>, "-|>", stroke: fstroke),
+    edge(<c>, <rec>, "-|>", stroke: fstroke),
+    edge(<e2>, <p>, "-|>", stroke: (paint: victim, thickness: 1.4pt), [local breakout], label-side: right),
+  ),
+  caption: [Mobility changes only the unicast segment from the edge to the anchor. The
+  tree from the anchor to the subscribers is stable. A subscriber on the publisher's own
+  edge is served there directly.],
+)
+
+- *Anchor.* Each publisher's tree is rooted at an anchor router in the core (or the
+  region gateway), not at the publisher. The ingress edge sends one copy to the anchor
+  over a unicast segment list; the anchor stamps the BIER-TE bitstring. This is the
+  rendezvous point of PIM-SM and the mobility anchor of Proxy Mobile IPv6 and 3GPP
+  user-plane functions, applied to Zenoh trees.
+- *Handover is cheap.* A handover changes only the edge-to-anchor segment: the new edge
+  is admitted for one unicast path and the anchor's tree is untouched. 3 handovers/s
+  become 3 unicast admissions/s, not 3 tree recomputations.
+- *Anchor relocation.* If a publisher moves far from its anchor and the stretch passes a
+  threshold, the PCE builds a tree at a closer anchor, runs both with PREOF during the
+  overlap, then removes the old one, like PIM's switch from the shared tree to a
+  shortest-path tree.
+- *Local breakout.* The ingress edge already holds the publisher's flow state, so it
+  also replicates to subscribers on the same edge. They skip the anchor round trip,
+  which matters most for nearby peers with tight deadlines.
+- *State.* Anchors hold per-publisher tree state (one bitstring per stream); they act
+  as edges of the core. Transit routers still hold none.
+
+== Handover storms: guard bandwidth
+
+Cellular networks solved this with guard channels: part of each cell's capacity
+accepts only handovers, never new calls, because dropping a moving call is worse than
+refusing a new one.
+
+- Each edge keeps a guard band G of its uplink and edge-to-anchor capacity. New streams
+  are admitted only while reservations stay below C − G; handovers may use all of C.
+- G is sized from the expected handover rate into that edge and the per-stream base
+  rate; the PCE resizes it on the minutes timescale from observed mobility.
+- *Predicted handover.* When a publisher's signal to its edge degrades, the neighbour
+  edge makes a soft, time-limited reservation for it, so the re-admission at handover
+  cannot fail for lack of capacity.
+- When a burst still exceeds G, lower-priority streams arrive at the new edge with
+  their base layer only before any stream is refused.
+
+== Layers as separate flows
+
+Each stream is published as layers on separate key expressions (e.g.
+`video/<id>/base`, `video/<id>/enh1`), each with its own contract.
+
+#table(
+  columns: (auto, auto, auto, 1fr),
+  stroke: 0.4pt + luma(200),
+  table.header([*Layer*], [*Contract*], [*Priority*], [*Treatment*]),
+  [Base, 2 Mb/s], [deterministic: rate, deadline, loss], [`RealTime`], [Reserved end to end; PREOF over both accesses during handover; never preempted by enhancement traffic],
+  [Enhancement, 6 Mb/s], [elastic: target rate], [`DataHigh`], [Uses spare capacity; first to be demoted or dropped under preemption, a storm or a weak uplink],
+)
+
+- *Uplink.* PREOF duplicates only the base layer during handover: 2 extra Mb/s on the
+  second access instead of 8.
+- *Heterogeneous subscribers.* Each subscriber takes the layers it can carry: the
+  operations centre takes the base layers of all 200 streams and the enhancement layers
+  of the few being watched; a nearby peer on Wi-Fi takes base plus one enhancement
+  layer. Trees differ per layer: receiver-driven layered multicast (McCanne, Jacobson
+  and Vetterli, 1996) on top of BIER-TE.
+- *Preemption order.* Enhancement layers go before any base layer of equal or higher
+  priority, so preemption lowers quality before it cuts video.
+
+== Subscriber fan-in
+
+A subscriber with a wildcard key expression (`video/**`) matches every stream, and its
+own access link becomes the bottleneck.
+
+- *Deterministic service is opt-in per subscriber and stream.* A wildcard subscription
+  gets best-effort delivery by default. The subscriber declares a receive contract: a
+  budget (e.g. 500 Mb/s) and which streams or layers get deterministic service.
+- *Admission at both ends.* A branch to a subscriber is admitted only if the stream's
+  path and the subscriber's budget both have room; the subscriber's access link is
+  checked like any other link.
+- *Changing what is watched.* When an operator opens a stream, the operations centre
+  adds that stream's enhancement layers to its receive contract and the PCE adds
+  branches for those layers only.
+
+== Who handles which event
+
+#table(
+  columns: (auto, auto, auto, 1fr),
+  stroke: 0.4pt + luma(200),
+  table.header([*Event*], [*Rate*], [*Handled by*], [*Work*]),
+  [Handover], [≈3/s], [new edge, PCE], [one edge-to-anchor admission against the guard band; no tree change],
+  [Layer up/down at a subscriber], [≈1/s], [PCE], [add or remove one branch of one layer tree],
+  [New stream], [rare], [PCE], [pick an anchor, build trees for subscribed layers],
+  [Anchor relocation], [rare], [PCE], [new tree in parallel, PREOF overlap, remove old],
+  [Uplink fluctuation], [continuous], [publisher, edge], [drop enhancement layers; no PCE work],
+  [Guard band resize], [minutes], [PCE], [from observed handover rates per edge],
+)
+
+At these rates (assumed, not measured) one PCE per region is enough; a region gateway
+forwards only inter-region tree changes.
+
 = Open questions
 
+- *Anchor placement:* one anchor per publisher chosen by load, or a fixed anchor per
+  edge group? How large a stretch triggers relocation?
+- *Guard band sizing:* from which mobility model, and per edge or per edge pair?
+- *Receive contracts:* how a subscriber with a wildcard key expression names the
+  streams it wants deterministic service for, without a wire change.
 - *PCE placement:* one per region, with gateways asking the next region's PCE, or one
   per deployment for the many-to-one cloud-upload case?
 - *Tree encoding:* BIER-TE bitstring vs per-subscriber segment lists for small fan-out
@@ -379,6 +535,10 @@ is crossed. Global flooding stays on the minutes timescale.
   bounded latency; RFC 8938 data plane framework.
 - RFC 8402 segment routing; RFC 9256 SR Policy; RFC 4829 TE LSP preemption policies.
 - RFC 8279 BIER; RFC 9262 BIER-TE.
+- RFC 7761 PIM-SM (rendezvous point, shortest-path-tree switchover); RFC 5213 Proxy
+  Mobile IPv6 (mobility anchor).
+- S. McCanne, V. Jacobson, M. Vetterli, "Receiver-driven layered multicast", SIGCOMM 1996.
+- Guard-channel handover admission in cellular networks (Hong and Rappaport, 1986).
 - draft-ietf-detnet-stateless-fair-queuing (C-SCORE); draft-ietf-detnet-tcqf (TCQF).
 - Zenoh Regions and gateways, eclipse-zenoh/zenoh \#2096.
 
