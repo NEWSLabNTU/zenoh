@@ -11,6 +11,7 @@ Base: upstream `eclipse-zenoh/zenoh` `main` at `b180cc6e2` (1.10.2 + 10 commits)
 | Document | Content |
 | --- | --- |
 | [design.md](design.md) | Goals, principles, standards map, Zenoh baseline, architecture, risks |
+| [architecture.typ](architecture.typ) | Architecture diagrams and use cases (preemption, multiple subscribers, stateless transit, mobility); build with `typst compile` (typst 0.15) |
 | [phase-1-flow-contract-admission.md](phase-1-flow-contract-admission.md) | RFC 9016 flow contract + RFC 9320 admission on stock Zenoh |
 | [phase-2-topology-underlay.md](phase-2-topology-underlay.md) | Capacity in link-state, PCE plugin, DSCP/TSN underlay mapping |
 | [phase-3-explicit-paths.md](phase-3-explicit-paths.md) | Segment-list network-message extension |
