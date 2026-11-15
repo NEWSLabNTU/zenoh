@@ -1,5 +1,7 @@
 # Phase 5: Replication and elimination
 
+> Superseded by [roadmap.md](roadmap.md); this phase now lives in E4, behind gate G4.
+
 **Status:** not started · **Wire change:** yes ·
 **Standards:** DetNet PREOF (RFC 8655), RFC 8938
 

@@ -1,5 +1,7 @@
 # Phase 4: Stateless core scheduling
 
+> Superseded by [roadmap.md](roadmap.md); this phase now lives in A3/E3, behind gate G1.
+
 **Status:** not started · **Wire change:** yes ·
 **Standards:** draft-ietf-detnet-stateless-fair-queuing (C-SCORE),
 draft-ietf-detnet-tcqf (TCQF)

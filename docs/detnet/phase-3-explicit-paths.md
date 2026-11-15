@@ -1,5 +1,7 @@
 # Phase 3: Explicit paths
 
+> Superseded by [roadmap.md](roadmap.md); this phase now lives in E1/E2, behind gate G3.
+
 **Status:** not started · **Wire change:** yes (non-mandatory extension) ·
 **Standards:** RFC 8402, RFC 9256
 

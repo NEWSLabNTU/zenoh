@@ -1,5 +1,7 @@
 # Phase 2: Topology and underlay mapping
 
+> Superseded by [roadmap.md](roadmap.md); this phase now lives in B2 and B3.
+
 **Status:** not started · **Wire change:** OAM (link-state) extension ·
 **Standards:** RFC 8939, RFC 9023, IEEE 802.1Qbv/Qav; PCEP (RFC 5440) and BGP-LS
 (RFC 7752) as design references

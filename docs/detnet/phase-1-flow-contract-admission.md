@@ -1,5 +1,7 @@
 # Phase 1: Flow contract and admission
 
+> Superseded by [roadmap.md](roadmap.md); this phase now lives in A0–A1, B1 and C4.
+
 **Status:** planning · **Wire change:** none · **Standards:** RFC 9016, RFC 9320
 
 Add RFC 9016 flow contracts and RFC 9320 admission on stock Zenoh, and measure
