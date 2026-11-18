@@ -27,11 +27,18 @@ cmd_image() { docker build -t detnet-node:latest image; }
 cmd_deploy() { mkdir -p results; sudo containerlab deploy -t "$TOPO" --reconfigure; }
 cmd_destroy() { sudo containerlab destroy -t "$TOPO" --cleanup; }
 
-cmd_shape() {
-  # netem (delay) as root, tbf (rate, 100 ms of buffer) as its child.
+cmd_shape() { # QDISC=fifo|prio (profiles set it; default fifo)
+  # netem (delay) as root, tbf (rate, 100 ms of buffer) as its child. With
+  # QDISC=prio a 3-band prio qdisc under tbf sends DSCP EF (TOS 0xb8) first.
   x r2 tc qdisc del dev eth2 root 2>/dev/null || true
   x r2 tc qdisc add dev eth2 root handle 1: netem delay "$DELAY" limit 100000
   x r2 tc qdisc add dev eth2 parent 1: handle 2: tbf rate "$RATE" burst 64kb latency 100ms
+  if [[ ${QDISC:-fifo} == prio ]]; then
+    x r2 tc qdisc add dev eth2 parent 2: handle 3: prio bands 3 \
+        priomap 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+    x r2 tc filter add dev eth2 parent 3: protocol ip u32 \
+        match ip tos 0xb8 0xfc flowid 3:1
+  fi
   x r2 tc qdisc show dev eth2
 }
 
@@ -43,15 +50,30 @@ cmd_stop() {
 }
 
 cmd_routers() { # $1 = profile
+  # Default chain: r1 -> r2 <- r3, one TCP link per hop. A profile may override
+  # R1_CONNECT / R2_CONNECT / R3_CONNECT (space-separated endpoints) and ROUTER_ARGS.
+  local R1_CONNECT="tcp/10.12.0.2:7447" R2_CONNECT="" R3_CONNECT="tcp/10.23.0.2:7447"
   # shellcheck disable=SC1090
   source "profiles/$1.env"
   cmd_stop
   local common="--no-multicast-scouting -l tcp/0.0.0.0:7447 $ROUTER_ARGS"
-  xd r2 sh -c "$BIN/zenohd $common >/tmp/zenohd.log 2>&1"
+  start_router() { # node, endpoints...
+    local node=$1; shift
+    local eps="" e; for e in "$@"; do eps+=" -e '$e'"; done
+    xd "$node" sh -c "$BIN/zenohd $common $eps >/tmp/zenohd.log 2>&1"
+  }
+  # Start routers that only listen first.
+  local r cfg
+  for r in r1 r2 r3; do
+    cfg=${r^^}_CONNECT; [[ -z ${!cfg} ]] && start_router "$r"
+  done
   sleep 1
-  xd r1 sh -c "$BIN/zenohd $common -e tcp/10.12.0.2:7447 >/tmp/zenohd.log 2>&1"
-  xd r3 sh -c "$BIN/zenohd $common -e tcp/10.23.0.2:7447 >/tmp/zenohd.log 2>&1"
-  sleep 2
+  for r in r1 r2 r3; do
+    cfg=${r^^}_CONNECT
+    # shellcheck disable=SC2086
+    [[ -n ${!cfg} ]] && start_router "$r" ${!cfg}
+  done
+  sleep 3
 }
 
 cmd_run() { # $1 = profile, $2 = cross load in % of bottleneck
@@ -61,6 +83,7 @@ cmd_run() { # $1 = profile, $2 = cross load in % of bottleneck
   [[ -f results/summary.csv ]] || echo "profile,load,n,loss_pct,p50_us,p99_us,p999_us,p9999_us,max_us" > results/summary.csv
   local id; id="$(date +%Y%m%d-%H%M%S)-$profile-L$load"
   mkdir -p "results/$id"
+  QDISC=${QDISC:-fifo} cmd_shape >/dev/null
   cmd_routers "$profile"
   local cross_rate=$(( $(rate_bps "$RATE") * load / 100 / (SIZE * 8) ))
   local sub_secs=$(( SECS + 6 ))
@@ -76,8 +99,9 @@ cmd_run() { # $1 = profile, $2 = cross load in % of bottleneck
   x pub "$BIN/zprobe" -e tcp/10.1.1.1:7447 pub -k detnet/probe -r "$PROBE_RATE" \
       -s "$SIZE" -d "$SECS" $PROBE_ARGS 2>"results/$id/pub.txt" || true
   sleep 5
-  printf 'profile=%s load=%s rate=%s delay=%s cross_rate=%s\n' \
-      "$profile" "$load" "$RATE" "$DELAY" "$cross_rate" > "results/$id/params.txt"
+  printf 'profile=%s load=%s rate=%s delay=%s cross_rate=%s loadavg=%s\n' \
+      "$profile" "$load" "$RATE" "$DELAY" "$cross_rate" "$(cut -d' ' -f1 /proc/loadavg)" \
+      > "results/$id/params.txt"
   local line; line=$(cat "results/$id/probe.txt")
   echo "$id $line"
   # profile,load,n,loss,p50,p99,p999,p9999,max
@@ -86,7 +110,12 @@ cmd_run() { # $1 = profile, $2 = cross load in % of bottleneck
 }
 
 cmd_sweep() { # profiles... ; loads from LOADS
-  for p in "$@"; do for l in ${LOADS:-0 25 50 75 90 100 120}; do cmd_run "$p" "$l"; done; done
+  local rep
+  for rep in $(seq "${REPS:-1}"); do
+    for p in "$@"; do for l in ${LOADS:-0 25 50 75 90 100 120}; do
+      ( cmd_run "$p" "$l" )
+    done; done
+  done
 }
 
 case ${1:-} in
