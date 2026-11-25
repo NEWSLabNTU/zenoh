@@ -21,6 +21,7 @@ Base: upstream `eclipse-zenoh/zenoh` `main` at `b180cc6e2` (1.10.2 + 10 commits)
 | [admission-model.typ](admission-model.typ) | C2 formal model: key-expression matching, admission constraints, aggregation lemmas, envelope charging, open problems |
 | [routing-semantics.md](routing-semantics.md) | Zenoh `main` routing behaviour the admission model depends on, with code references |
 | [../../tools/detnet-sim](../../tools/detnet-sim/README.md) | C2 admission simulator (Rust, uses zenoh-keyexpr) and first results |
+| [proposal.typ](proposal.typ) | Research proposal and progress report with diagrams |
 | [architecture.typ](architecture.typ) | Architecture diagrams and use cases (preemption, multiple subscribers, stateless transit, mobility); build with `typst compile` (typst 0.15) |
 
 ## Roadmap
